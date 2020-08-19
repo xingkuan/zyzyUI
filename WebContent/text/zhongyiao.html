@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <head>
   <title>zhong yiao</title>
-  <script src="../js/d3.v3.min.js"></script>
-  <script src="elasticsearch-js/elasticsearch.js"></script>
-  <script src="../js/zhongyiao.js"></script>
+  <script src="../d3JS/d3.v3.min.js"></script>
+  <script src="../elasticsearch-js/elasticsearch.js"></script>
+  <script src="zhongyiao_nod.js"></script>
   <!-- script src="../js/d3.v3.js"></script -->
-  <script src="../js/zhongyiao_rel.js"></script>
+  <script src="zhongyiao_rel.js"></script>
   <style>
     body {
       font: 14px sans-serif;
@@ -26,7 +26,6 @@
       display:block;
     }
 
-    //d3 tree presentation
     .node {
       cursor: pointer;
     }
@@ -44,14 +43,11 @@
       stroke-width: 2px;
     }
 
-    //es search result
     .name_cn {
       color: blue;
-      //font: 12px sans-serif;
       font-weight: bold;
     }
 
-    // d3 relation div:
 #d3Relation {
       width: 500px;
       height: 600px;

@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <title>Insert title here</title>
 
-<script src="/esD/js/jquery-3.3.1.min.js"></script>
-<script src="/esD/js2018/elasticsearch.js"></script>
-<script src="/esD/js2018/d3.js"></script>
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
 <!-- script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js" -->
 
 <script>
@@ -42,10 +42,10 @@ $(document).ready(function() {
 		//alert("load seq: " + id);
 	    $.ajax({
 	        type: "GET",
-	        url: "/esD/reader/note/getByID/"+id,
+	        url: "/zyzySvc/reader/note/getByID/"+id,
 	        data: "",
-	        dataType: "text",
-	        contentType: "application/text",
+	     //   dataType: "text",
+	     //   contentType: "application/text",
 	        success: function(data) {
 	        	//alert(data);
 				//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
