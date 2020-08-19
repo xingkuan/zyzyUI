@@ -1,0 +1,5 @@
+elasticsearch.angular.js
+elasticsearch.query.js
+elasticsearch.jquery.js
+elasticsearch.js
+...
