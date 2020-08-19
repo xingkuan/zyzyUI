@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="quill/quill.min.js" ></script>
+<link href="quill/quill.snow.css" rel="stylesheet">
+<script src="quill/quill.js" ></script>
+
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js2018/elasticsearch.js"></script>
+<script src="../js2018/d3.js"></script>
+
+<link rel="stylesheet" href="../js2018/textassist/styles.css" media="screen">
+<link rel="stylesheet" href="../js2018/textassist/textassist.css" media="screen">
+<script src="../js2018/textassist/textassist.min.js"></script>
+
+<script>
+
+$(document).ready(function () { 
+	getRelationList();
+//	$('#srcTempList').hide();
+/*
+	function isValidURL(url){
+		var RegExp = /^(([\w]+:)?\/\/)?(([\d\w]|%[a-fA-f\d]{2,2})+(:([\d\w]|%[a-fA-f\d]{2,2})+)?@)?([\d\w][-\d\w]{0,253}[\d\w]\.)+[\w]{2,4}(:[\d]+)?(\/([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)*(\?(&?([-+_~.\d\w]|%[a-fA-f\d]{2,2})=?)*)?(#([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)?$/;
+		return RegExp.test(url);
+	}
+
+	function isValidEmail(email) {
+		var RegExp = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+		return RegExp.test(email);
+	}
+*/
+});
+	
+	// build the "relation" dropdown box:
+	// .. get the values:
+	function getRelationList() {
+                    $.ajax({
+                        type: "GET",
+                        url: "/zyzySvc/reader/relation/get",
+                        data: "",
+                        //dataType: "text",
+                        //contentType: "application/text",
+                        success: function(data) {
+                            populateRelBox(data);
+                        },
+            			error : function(jqXHR, textStatus, errorThrown) {
+            				alert('error: ' + textStatus + errorThrown);
+            			}
+                    });
+	}
+	// .. and build the dropdown box:
+	function populateRelBox(data) {
+		var options = $('#selRelation');
+		$.each( data, function(i) {
+			//alert('val, text: ' + data[i].val + ", " + data[i].text);
+   			options.append(
+        		'<option style="height:5px;" value="' + data[i].val + '">' + data[i].text + '</option>'
+    		);
+		});
+	}	
+
+
+	function setNoteD(sec, val){
+		//alert("srcSetup: " + emID + ", " + val);
+	    $.ajax({
+	        type: "GET",
+	        url: "/zyzySvc/reader/note/get/"+val,
+	        data: "",
+	       // dataType: "text",
+	       //// contentType: "application/text",
+	        success: function(data) {
+	        	//alert(data);
+	        	if(data != null){
+				//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
+	    		//document.getElementById(sec+"Note").value = rslt;
+	    		//$('#'+sec+'Note').html(data);
+	    		//textContainer.clipboard.dangerouslyPasteHTML(data, 'api');
+	    		json=JSON.parse(data);
+	    		note=json.val;
+	    		//meta=json.meta;
+	    		//template=json.template;
+	    		//$('#'+sec).text(note);
+	    		$('#'+sec).html(note);
+	        }
+	        },
+			error : function(jqXHR, textStatus, errorThrown) {
+				alert('error: ' + textStatus + errorThrown);
+			}
+	    });
+	}
+
+	
+	function addRelation() {
+		//rem alert('to create... \nsrc: ' + $('#srcNote').val() + '\n...tgt: ' +  $('#tgtNote').val() + "\n...relation:" + $('#selRelation option:selected').val());
+		//rem console.log('add a note');
+		$.ajax({
+			type : 'POST',
+			url : "/zyzySvc/reader/addRelation",
+			//contentType: 'application/json',
+			contentType : 'application/text',
+			//contentType: 'text/plain',
+			//dataType: "json",
+			dataType : "text",
+			//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
+			data : composeData(),
+			success : function(data, textStatus, jqXHR) {
+				alert('relation created successfully');
+			},
+			error : function(jqXHR, textStatus, errorThrown) {
+				alert('error: ' + textStatus + errorThrown);
+			}
+		});
+		document.getElementById("src1Data").value = " ... ";
+		//getRelationList(); 
+	}
+
+	//Helper function to serialize all the form fields into a JSON string
+	function composeData() {
+		var rel=$('#selRelation option:selected').val();
+		//alert($('#selRelation option:selected').val());
+		var strRslt, rsltObj;
+		rsltObj = {
+			name1: $('#src1Name').val(),
+			name2: $('#src2Name').val(),
+			relation: $('#selRelation').val(),
+			//relation: document.getElementById("selRelation").options.length,
+			meta: $('#relMeta').text(),
+		};
+		
+		//alert(typeof rsltObj );
+		let json= JSON.stringify(rsltObj)
+//alert(json);
+		
+		//return strRslt;
+		return json;
+	}
+	
+</script>
+
+<style>
+
+
+
+
+select {
+padding:2px;
+margin-top:2px;
+line-height:1;
+border-radius:2px;
+outline:none
+}
+option {
+padding:2px;
+margin-top:2px;
+line-height:0;
+border-radius:2px;
+outline:none
+}
+
+
+
+div.oTitle { 
+	font-weight: bold;
+	font-size: 30px;
+	height: 30px;
+	width: 100px;
+}
+
+
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+.column-1, .column-2 {
+  float: left;
+  position: relative;
+}
+.column-1 {
+  width: 100px;
+  margin-top:10px;
+}
+.column-2 {
+	width: 80%;
+	margin-top: 10px;
+}
+
+.editMeta {
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  display: inline-block;
+  float: left;
+  height: 60px;
+  width: 100%;
+}
+
+.editor-container {
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  display: inline-block;
+  height: 60px;
+  width: 100%;
+  overflow:scroll;
+}
+
+
+</style>
+
+</head>
+
+<body>
+	<form id="noteFrm" enctype='text/plain' action="#"
+		onsubmit="addRelation();return false">
+
+<div id="src1RowName" class="row" >
+  <div class="column-1">Src1 Name:</div> 
+  <div class="column-2">
+	<input type="text" id="src1Name" name="srcName" 
+		placeholder=" ... enter src 1 name" 
+		onchange='setNoteD("src1Data", this.value)'>
+	</input>
+  </div>
+</div>
+<div id="src1RowData" class="row">
+  <div class="column-1">
+  </div> 
+  <div class="column-2">
+    <div id="src1Data" class="editor-container" contenteditable="false">
+    </div>  
+  </div>
+</div>
+		
+<div id="relRowName" class="row" >
+  <div class="column-1">relate:</div> 
+  <div class="column-2">
+  <!-- 
+  <select id="selRelation">
+    <option style="font-weight: bold; color: red" value="" selected>choose the relation...</option>
+  </select>  -->
+    <input id="selRelation" list="selRel" name="selRelation" placeholder=" ...">
+  <datalist id="selRel">
+   <!--  <option value="Internet Explorer">   <option value="Firefox">  -->
+  </datalist>
+  
+  
+  </div>
+  <div class="column-1"></div> 
+  <div class="column-2">
+    <div class="column-2">
+    <div id="relMeta" class="editMeta" contenteditable="true">
+    </div>  
+  </div>
+  
+  
+</div>
+
+<div id="src2RowName" class="row" >
+  <div class="column-1">Src1 Name:</div> 
+  <div class="column-2">
+	<input type="text" style="margin-left:0px" id="src2Name" name="srcName" 
+		placeholder=" ... enter src 1 name" 
+		onchange='setNoteD("src2Data", this.value)'>
+	</input>
+  </div>
+</div>
+<div id="src2RowData" class="row">
+  <div class="column-1">
+  </div> 
+  <div class="column-2">
+    <div id="src2Data" class="editor-container" contenteditable="false">
+    </div>  
+  </div>
+</div>
+
+
+<div id="rowAct" class="row">
+  <div class="column-1">
+  </div>
+  <div class="column-2">
+	<input type="submit" value="add Relation">
+  </div>
+</div>		
+</form>
+
+
+
+</body>
+</html>

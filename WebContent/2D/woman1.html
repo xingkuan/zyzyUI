@@ -1,0 +1,334 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="openlayers/ol.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="openlayers/ol.css" type="text/css">
+    <style>
+      /* Toolbar styles */
+      #selectLine {
+            position: relative;
+            padding-bottom: 0.5em;
+      }
+
+      #map {
+        clear: both;
+        position: relative;
+        width: 404px;
+        height: 600px;
+        border: 1px solid black;
+      }
+
+#wrap {
+float:left;
+width:410px;
+background:#9c9;
+}
+#info {
+float:left;
+width:200px;
+background:#c9c;
+}
+
+    </style>
+
+
+    <title>my map apps</title>
+  </head>
+  <body>
+    <h1>My Map</h1>
+  <div id="wrap">
+    <div id="selectLine" style="display: block;">
+       <a>Lines:</a>
+       <select id="lineFilter" onchange="updateLineSelection()">
+         <option value="手太阴肺经">手太阴肺经</option>
+         <option value="手少阴心经">手少阴心经</option>
+         <option value="手厥阴心包经">手厥阴心包经</option>
+         <option value="手阳明大肠经">手阳明大肠经</option>
+         <option value="手少阳三焦经">手少阳三焦经</option>
+         <option value="手太阳小肠经">手太阳小肠经</option>
+         <option value="足厥阴肝经">足厥阴肝经</option>
+         <option value="足太阴脾经">足太阴脾经</option>
+         <option value="足少阴肾经">足少阴肾经</option>
+         <option value="足阳明胃经">足阳明胃经</option>
+         <option value="足太阳膀胱经">足太阳膀胱经</option>
+         <option value="足少阳胆经">足少阳胆经</option>
+       </select>
+       <a id="resetLineFilterButton" href="#" onClick="resetLineFilter()" title="Reset Line">Reset</a>
+       &nbsp;&nbsp;&nbsp;<a>Points:</a>
+       <input type="text" size="15" id="pointFilter"/>
+       <a id="resetPointFilterButton" href="#" onClick="updatePointSelection()" title="point">Point</a>
+    </div>
+    <div id="map"></div>
+ </div>
+ <span id="info">info...</span>
+
+    <script type="text/javascript">
+     //??var pureCoverage = false;
+
+     var format = 'image/png';
+     var bounds = [100.0962560119077, 100.14612728105544,
+                    1050.0192188770561, 1902];
+
+     var projection = new ol.proj.Projection({
+          code: 'EPSG:32601',
+          units: 'm',
+          axisOrientation: 'neu',
+          zoom: 0,
+          global: false
+      });
+
+      var woman_f32601_img = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',
+                STYLES: '',
+                LAYERS: 'woman2:woman2_32601',
+          }
+        })
+      });
+      var woman_f32601a = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',
+                STYLES: '',
+                LAYERS: 'woman2:woman_f32601a',
+          }
+        })
+      });
+      var woman_s32601a = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',
+                STYLES: '',
+                LAYERS: 'woman2:woman_s32601a',
+          }
+        })
+      });
+      var woman_b32601a = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',
+                STYLES: '',
+                LAYERS: 'woman2:woman_b32601a',
+          }
+        })
+      });
+
+      var points = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',
+                STYLES: '',
+                LAYERS: 'woman2:woman2_32601_pt',
+          }
+        })
+      });
+
+      var points_PostGIS = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',  
+                STYLES: '',
+                LAYERS: 'woman2:points',
+          }
+        })
+      });
+//points from WFS/////////
+point_feature = {
+  srsName: 'EPSG:32601',
+  version: '1.0.0',
+  featureTypes: ['woman2:points'],
+  outputFormat: 'application/json',
+};
+var vector_point_src = new ol.source.Vector();
+//http://localhost:8080/geoserver/woman2/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=woman2:points&maxFeatures=50&outputFormat=application%2Fjson
+var points_WFS = new ol.layer.Vector({
+   source: vector_point_src,
+});
+/////////////////////////
+
+
+      var lines_PostGIS = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          ratio: 1,
+          url: 'http://localhost:8080/geoserver/woman2/wms',
+          params: {'FORMAT': format,
+                   'VERSION': '1.1.1',  
+                STYLES: '',
+                LAYERS: 'woman2:lines',
+          }
+        })
+      });
+
+// line served out of WFS ////////////////
+line_feature = {
+  srsName: 'EPSG:32601',
+    version: '1.0.0',
+    //request: 'GetFeature',
+    featureTypes: ['woman2:lines'],
+    outputFormat: 'application/json',
+    //filter: ol.format.filter.and(
+    //  ol.format.filter.equalTo('name', 'line1')
+    //)
+};
+var vector_line_src = new ol.source.Vector();
+var lines_WFS = new ol.layer.Vector({
+   source: vector_line_src,
+//   style: new ol.style.Style({
+//     stroke: new ol.style.Stroke({
+//       color: 'rgba(0, 0, 255, 1.0)',
+//       width: 2
+//     })
+//   })
+ });
+//sample:
+//line_feature['filter']= ol.format.filter.like('name', strQuery);
+/////////////////////////////////////////////
+
+
+// funtion for load/refresh layer
+function updateVect(vectSrc, featureJson){
+    featureRqst = new ol.format.WFS().writeGetFeature( featureJson );
+
+    fetch('http://localhost:8080/geoserver/woman2/ows?service=WFS', {
+        method: 'POST',
+        body: new XMLSerializer().serializeToString(featureRqst)
+      }).then(function(response) {
+        return response.json();
+      }).then(function(json) {
+        var features = new ol.format.GeoJSON().readFeatures(json);
+
+        // refresh the layer:
+        // For test
+        //fths = vectSrc.getFeatures();
+        vectSrc.clear(true);
+        vectSrc.addFeatures(features);
+     //   map.getView().fit(vectSrc.getExtent());  //not needed! and it actually cause problem on when updateVect(..) is called the 2nd time.
+      });
+}
+
+//display after loading. 
+updateVect(vector_line_src, line_feature);
+updateVect(vector_point_src, point_feature);
+
+
+
+      var map = new ol.Map({
+        target: 'map',
+        layers: [
+            //woman_f32601_img,
+            woman_f32601a,
+            woman_s32601a,
+            woman_b32601a,
+            //points,
+            //points_PostGIS,
+            points_WFS,
+            lines_WFS
+          //  lines_PostGIS
+        ],
+        view: new ol.View({
+          projection: projection,
+          center: [500, 500],
+          zoom: 0,
+          //maxResolution: 2.903125,
+          maxResolution: 4.000000,
+          //minResolution: 0.703125
+          minResolution: 0.500000
+        })
+      });
+
+
+      function updateLineSelection(){
+        var filter = document.getElementById('lineFilter').value;
+          strQuery = document.getElementById('lineFilter').value;
+          strQuery=strQuery+'*';
+          //point
+          delete point_feature['filter'];
+          point_feature['filter']= ol.format.filter.like('line_name', strQuery);
+          updateVect(vector_point_src, point_feature);
+          //line
+          delete line_feature['filter'];
+          line_feature['filter']= ol.format.filter.like('name', strQuery);
+          updateVect(vector_line_src, line_feature);
+        }
+
+        function resetLineFilter() {
+          //line
+          delete line_feature['filter'];
+          updateVect(vector_line_src, line_feature);
+          //point
+          delete point_feature['filter'];
+          updateVect(vector_point_src, point_feature);
+        }
+
+
+
+     function updatePointSelection(){
+        var filter = document.getElementById('pointFilter').value;
+        if (filter.replace(/^\s\s*/, '').replace(/\s\s*$/, '') != "") {
+          strQuery=filter+'*';
+          //point
+          delete point_feature['filter'];
+          point_feature['filter']= ol.format.filter.like('pingying', strQuery);
+          updateVect(vector_point_src, point_feature);
+          //line
+          delete line_feature['filter'];
+          //line_feature['filter']= ol.format.filter.like('name', strQuery);
+          updateVect(vector_line_src, line_feature);
+        }
+     }
+ 
+
+
+
+        //// shows/hide the control panel
+        //function toggleControlPanel(){
+        //  var selectLine = document.getElementById("selectLine");
+        //  if (selectLine.style.display == "none") {
+        //    selectLine.style.display = "block";
+        //  }
+        //  else {
+        //    selectLine.style.display = "none";
+        //  }
+        //  map.updateSize()
+        //}
+
+
+      // select interaction working on "pointermove":
+      var selectPointerMove = new ol.interaction.Select({
+        condition: ol.events.condition.pointerMove
+      });
+
+      //selectPointerMove.on('select', function(e) {
+      //    document.getElementById('info').innerHTML = '&nbsp;' +
+      //       e.target.getFeatures().getLength() +
+      //       '; {selected: ' + e.selected.length +
+      //       '}: {deselected: ' + e.deselected.length + '})';
+      // });
+      selectPointerMove.on('select', function(e) {
+          document.getElementById('info').innerHTML = '&nbsp;' +
+            e.selected[0].get['name'] + '('+  e.selected[0].get('pingying')  +')'+':</br>' +
+            e.selected[0].get('name_explained') + '</br></br>' +
+            'APPS: </br>' + e.selected[0].get('applications') + '</br>' +
+            '</br>' +
+            'DESC:</br>' + e.selected[0].get('description') ;
+       });
+      map.addInteraction(selectPointerMove);
+
+
+    </script>
+  </body>
+</html>

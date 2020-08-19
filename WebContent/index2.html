@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    <head>
+        <title>Elastic Aggregations</title>
+
+        <script src="elasticsearch-js/elasticsearch.js"></script>
+        <script src="js/d3.v3.min.js"></script>
+        <script src="js/main2.js"></script>
+
+        <style>
+body {
+        font: 14px sans-serif;
+    }
+    .arc path {
+        stroke: #fff; 
+        stroke-width: 3px;
+    }
+</style>
+
+    </head>
+    <body>
+       <select id="symptom" onchange="updateSymptomSelection()">
+         <option value="瘀血">瘀血</option>
+         <option value="阴痿">阴痿</option>
+         <option value="口舌疮烂">口舌疮烂</option>
+         <option value="明目益气">明目益气</option>
+         <option value="香港脚">香港脚</option>
+         <option value="惊痫温疟">惊痫温疟</option>
+         <option value="汤火伤灼">汤火伤灼</option>
+         <option value="脾胃虚弱">脾胃虚弱</option>
+         <option value="生津液">生津液</option>
+         <option value="牙痛">牙痛</option>
+         <option value="脱肛">脱肛</option>
+         <option value="癣疮">癣疮</option>
+       </select>
+
+    <div id="main">
+      <table id="split">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+      
+     <div id="esResult">
+     </div>
+      
+      
+    </div>
+
+<script>
+  function updateSymptomSelection(){
+    var filter = document.getElementById('symptom').value;
+    //alert(filter);
+    esSearch(filter);
+  }
+</script>
+
+
+    </body>
+</html>

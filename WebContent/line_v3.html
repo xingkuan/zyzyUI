@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Neo4j Bolt Cypher</title>
+  <script src="js/jquery-3.3.1.min.js"></script>  
+  <!-- script src="js2018/d3.js"></script  -->
+  <script type="text/javascript" src="js/d3.v3.min.js"></script>
+  <!-- script src="../js2018/d3_5.7/d3.min.js"></script -->
+  <script src="js2018/neo4j/neo4j-web.js"></script>
+      
+    <style>
+        body {
+        font: 12px "Courier New";
+        background-color: white;
+        margin: 0;
+        overflow-y: scroll;
+    }
+    
+    #main {
+        width: 100%;
+        margin: 0;
+        position: relative;
+    }
+
+    #statement {
+        border-width: 0;
+        margin: 3px;
+        width: 90%;
+  border-style: solid;
+  border-width: 1px;
+          resize: vertical;
+        min-height: 36px;
+        height: 72px;
+        padding: 2;
+         vertical-align: top;
+        }
+   
+       #D3div {
+        width: 100%;
+        vertical-align: top;
+  border-style: solid;
+  border-width: 1px;
+        padding: 2;
+                margin: 3px;
+        width: 90%;
+        height: 360px;
+        resize: vertical;
+        overflow: auto;
+               font: 12px "Courier New";
+    }
+        
+        
+    #results {
+        width: 100%;
+        vertical-align: top;
+  border-style: solid;
+  border-width: 1px;
+        padding: 2;
+                margin: 3px;
+        width: 90%;
+        height: 100px;
+        overflow: auto;
+               font: 12px "Courier New";
+    }
+
+    #console {
+        width: 100%;
+        vertical-align: top;
+    }
+    
+    #runButton {
+        height: 100%;
+        border-width: 0;
+        margin: 5px;
+        font: bold 16px "Courier New";
+        cursor: pointer;
+        background-color: #008CC2;
+        color: #FFF;
+    }
+
+
+
+
+
+.link {
+  stroke-width: 1.5px;
+  stroke: green;
+}
+
+.node text {
+
+cursos:pointer;
+font-size:10px;
+}
+
+.node circle{
+  fill: #F0F9D1;
+}
+
+.nodeClass2{
+fill:red"}
+.nodeClass1{
+font-size:10; 
+fill:red"}
+
+
+ 
+text {
+  fill: #000;
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+
+.arrowHead{
+		fill: #f00;
+	}
+    </style>
+    
+
+  </head>
+  <body>
+
+    <div id="main">
+        <form>
+              <textarea id="statement"></textarea>
+              <input id="runButton" type="button" value="RUN" onclick="run()" onfocus="this.blur()">
+        </form>
+    </div>
+
+<div id="D3div"></div>
+<div id="results"></div>
+<div id="console"></div>
+    <script>
+ 
+    function idIndex(a,id) {
+    	for (var i=0;i<a.length;i++) {
+    	    if (a[i].id == id) return i;}
+    	return null;
+    }
+    var nodes=[], links=[];
+    
+    //var auth = new Buffer(dbusername+':'+dbpassword).toString('base64');
+    var auth = btoa('neo4j:lisa');
+    
+    function run() {
+        var stmt = document.getElementById("statement").value;
+        var post_request = {
+        		"statements":[
+        				//{"statement":"MATCH(n) RETURN(n)"}
+        				{"statement":stmt, "resultDataContents":["graph"]}
+        			]
+        		};
+
+        $.ajax({
+    	  type: "POST",
+    	  accept: "application/json",
+    	  headers: {"Authorization":"Basic " + auth},
+    	  //Authorization: 'Basic '+auth,
+    	  contentType:"application/json; charset=utf-8",
+    	  url: "http://localhost:7474/db/data/transaction/commit",
+    	  data: JSON.stringify(post_request),
+    	  success: function(data, textStatus, jqXHR){
+    	    console.log(data);
+    	    //results.innderHTML=JSON.stringify(data, null,2);
+			$('#results').text(JSON.stringify(data, null,2));
+			
+			/////
+		    data.results[0].data.forEach(function (row) {
+		    	row.graph.nodes.forEach(function (n) {
+		    	   if (idIndex(nodes,n.id) == null)
+		    	     nodes.push({id:n.id,label:n.labels[0],title:n.properties.id, cnt:n.properties.cnt});
+		    	       //maybe we can use cnt for something ...
+		    	});
+		    	links = links.concat( row.graph.relationships.map(function(r) {
+		    	   //return {start:idIndex(nodes,r.startNode),end:idIndex(nodes,r.endNode),type:r.type};
+		    	   return {source:idIndex(nodes,r.startNode),target:idIndex(nodes,r.endNode),relation:r.type};
+		    	}));
+		    });
+			
+		    //viz = {nodes:nodes, links:links};
+			D3draw("#D3div", nodes, links);
+    	  },
+    	  failure: function(msg){console.log("failed")}
+    	});
+    }
+    
+    function D3draw(d3DivId, nodes, links){
+        //var width = 660,  height = 500;
+        var width = $(d3DivId).innerWidth(), height=$(d3DivId).innerHeight();
+
+/*
+    	//add zoom capabilities 
+    	var zoom = d3.behavior.zoom()
+    		.scalExtent([1,10])
+    	    .on("zoom", zoomed);
+    	//drag
+    	var drag = d3.behavior.drag()
+        .origin(function(d) { return d; })
+        .on("dragstart", dragstarted)
+        .on("drag", dragged)
+        .on("dragend", dragended);
+*/
+        
+        var svg = d3.select(d3DivId).append("svg")
+        	.attr("width", width)
+       		.attr("height", height)
+       		.call(d3.behavior.zoom().on("zoom", function () {
+       		    svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+       	  }))
+       	  .append("g");
+
+	var force = d3.layout.force()
+        .size([width, height])
+        .gravity(.05)
+        .nodes(nodes)
+        .links(links)
+        .linkDistance(50)
+        //.distance(100)
+        .charge(-500)
+        .start();
+		//.call(zoom);
+
+
+    // create arrows ...
+    var marker = svg.append("svg:defs").append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 0 10 10")
+        .attr("refX", 20)
+        .attr("refY", 5)
+        .attr("markerUnits", "strokeWidth")
+        .attr("markerWidth", 12)
+        .attr("markerHeight", 12)
+        .attr("orient", "auto")
+      .append("svg:path")
+        .attr("d", "M0,0L5,5L0,10L3,5L0,0")
+        .attr("class","arrowHead");
+// add the links with the arrows
+    var link = svg.append("svg:g")
+    //.call(zoom)
+    .selectAll("line")
+        .data(links)
+      .enter().append("line")
+       .attr("id", function(d) { return "r" + d.source.id + "to" + d.target.id; } )
+        .attr("class", "link")
+        .style("stroke-width", function(d) { return 1; })
+        .attr("marker-end", "url(#arrow)");
+    var mytext = svg.append("svg:g").selectAll("text")
+    .data(links).enter()
+    .append("text")
+    //.attr("x", function(d) { return 40;})
+    //.attr("y", 30)
+    .attr("dx", 0)
+    .attr("dy", 0)
+    .text(function(d) { return d.relation;});
+    
+     mytext.append("textPath")
+     .attr("xlink:href", function(d) { return "#" + "r" + d.source.id + "to" + d.target.id; })
+     .attr("style", "fill:magenta; font-weight:bold; font-size:12")
+     .text(function(d) { return d.relation; } );
+/*  var test = svg
+    .append("text")
+    .attr({"x": 400, "y": 400})
+    .text("WORLD");
+*/
+    
+    // node group
+var xnodes = force.nodes();
+var node = svg.selectAll(".node")
+    .data(nodes)
+  .enter().append("g")
+    .attr("class", "node")
+    .call(force.drag);
+    // and the nodes
+node.append("circle")
+	.attr("r","12")
+	//.attr("fill", "grey")
+    //.on("click", function(d){esSearch(d.name);})
+   .append("svg:title")
+   .text(function(d) { return "content of " + d.title ; });
+/*
+ node.append("text")
+    .attr("text-anchor", "middle")
+    .attr("dx", 12)
+    .attr("dy", ".35em")
+    .text(function(d) { return d.name });
+*/
+node.append("text")
+   .attr("text-anchor", "middle")
+   .attr("style", "font-weight:bold; font-size:12")
+   // .attr("class", function(d) {
+   //   if (d.relcnt >= 3)
+   //   {
+   //      return "nodeClass1";
+   //   }
+   //   else
+   //   {
+   //     return "nodeClass2";
+   //   }
+   //})
+   // .attr("class", "nodeTitle")
+    .text(function(d) { return d.title; });
+
+ 
+ 
+ 
+ 
+ 
+force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    mytext
+    .attr("x", function(d) {
+        return ((d.source.x + d.target.x)/2);
+    })
+    .attr("y", function(d) {
+        return ((d.source.y + d.target.y)/2);
+    });
+    
+    node.attr("transform", function(d) { 
+    	return "translate(" + d.x + "," + d.y + ")"; 
+    	});
+    
+});
+
+
+//force.start();
+    
+
+    
+    
+/*
+    function zoomed() {
+    	  container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+    	}
+
+    	function dragstarted(d) {
+    	  d3.event.sourceEvent.stopPropagation();
+    	  d3.select(this).classed("dragging", true);
+    	}
+
+    	function dragged(d) {
+    	  d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+    	}
+
+    	function dragended(d) {
+    	  d3.select(this).classed("dragging", false);
+    	}
+*/    	
+    }
+ 
+    </script>
+
+  </body>
+</html>
+

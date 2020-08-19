@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="js/jquery-3.3.1.min.js"></script>
+<!-- script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js" -->
+
+<script>
+ 
+function setJson(el){
+    var cat=el.value;
+    var strJson;
+    if (cat == 'people'){
+        strJson = '{\n'+ 
+        	'"name": "xxx",\n' +
+        	'"year": "1000"\n' +
+        '}'
+    }else if(el.value == 'work'){
+        strJson = '{\n' +
+        	'"name": "xxx",\n'+
+        	'"author": "xxxx",\n'+
+        	'"year": "nnnn"'+
+        '}'
+    }else if(el.value == 'matter'){
+        strJson = '{\n' +
+        	'"name": "xxx",\n' +
+        	'"taste": "mmmm" \n' +
+        '}'
+    }else if(el.value == 'general'){
+        strJson = '{\n' +
+        	'"src": "xxx",\n' +
+        	'"text": "mmmm" \n' +
+        '}'
+    }else{
+        strJson = '{  \
+        	"nothing": "xxx"  \
+        }'
+    }
+    document.getElementById("txtNote").value = strJson;
+}
+
+function addNote() {
+    console.log('add a note');
+    $.ajax({
+        url: "reader/addNote",
+        type: 'POST',
+        //contentType: 'application/json',
+        contentType: 'application/text',
+        //contentType: 'text/plain',
+        //dataType: "json",
+        dataType: "text",
+        //data: formToJSON(),
+        //data: $('#txtNote').val(),
+        data: '{"cat": "test1", "val": ' + $('#txtNote').val() + '}',
+        success: function(data, textStatus, jqXHR){
+            alert('note created successfully');
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert('error: ' + textStatus + errorThrown);
+        }
+    });
+    $("input:radio[name='cat']").each(function(i) {
+        this.checked = false;
+    });
+    document.getElementById("txtNote").value = "<<< choose the corresponding template above >>>";
+}
+
+//Helper function to serialize all the form fields into a JSON string
+function formToJSON() {
+/*    return JSON.stringify({
+        "cat": $('input[name="cat"]:checked').val(),
+        "data": $('#txtNote').val()
+        })
+        */
+		alert($('#txtNote').val());
+        return JSON.stringify(
+        		$('#txtNote').val()
+            )
+}
+
+
+function addPhrase() {
+    console.log('add phrases');
+    $.ajax({
+        type: 'POST',
+        contentType: 'application/json',
+        //contentType: 'text/plain',
+        url: "reader/addPhrase",
+        //dataType: "json",
+        dataType: "text",
+        data: $('#txtPhr').val(),
+        success: function(data, textStatus, jqXHR){
+            alert('note created successfully');
+            $('#btnDelete').show();
+            $('#wineId').val(data.id);
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert('error: ' + textStatus + errorThrown);
+        }
+    });
+    document.getElementById("txtPhr").value = "XXX\nYYY";
+}
+
+    function addGeneralNote() {
+        console.log('add General Note');
+        $.ajax({
+            type: 'POST',
+            contentType: 'application/json',
+            //contentType: 'text/plain',
+            url: "reader/addGeneralNote",
+            //dataType: "json",
+            dataType: "text",
+            data: '{"cat": "test1", "val": ' + $('#txtGen').val() + '}',
+            success: function(data, textStatus, jqXHR){
+                alert('gen. note created successfully');
+                $('#btnDelete').show();
+                $('#wineId').val(data.id);
+            },
+            error: function(jqXHR, textStatus, errorThrown){
+                alert('error: ' + textStatus + errorThrown);
+            }
+        });
+        document.getElementById("txtGen").value = '{"source": "xxxx",\n"note": "nnnn"\n}';
+}
+
+</script>
+<style>
+.out1
+{
+	height:  500px;
+	width:	700px;
+}
+.txtBox1
+{
+	height:  300px;
+	width:	500px;
+}
+</style>
+
+</head>
+
+<body >
+<div class="out1">
+<div></div>
+   <div class="txtBox1">
+      <form id="noteFrm" enctype='text/plain' action="#" onsubmit="addNote();return false" >
+
+         <input type="radio" onclick="setJson(this)" name="cat" value="people"> People
+         <input type="radio" onclick="setJson(this)" name="cat" value="work"> Work
+         <input type="radio" onclick="setJson(this)" name="cat" value="matter"> Matter 
+
+         <textarea id="txtNote" rows="12" cols="80" name=note form="noteFrm">
+<<< choose the corresponding template above >>>
+         </textarea>
+    <input type="submit" value="addNote">
+  </form>
+</div>
+
+   <div class="txtBox1">
+      <form id="frmPhr" enctype='text/plain' action="#" onsubmit="addPhrase();return false" >
+         Phrase    
+         <textarea id="txtPhr" rows="8" cols="60" name=note form="frmPhr">
+XXX
+YYY
+         </textarea>
+    <input type="submit" value="addPhrase">
+  </form>
+</div>
+
+   <div class="txtBox1">
+      <form id="frmGen" enctype='text/plain' action="#" onsubmit="addGeneralNote();return false" >
+         General Note    
+         <textarea id="txtGen" rows="8" cols="60" name=note form="frmGen">
+{"source": "XXX",
+ "note": "nnnn"
+ }
+         </textarea>
+    <input type="submit" value="addGenNote ">
+  </form>
+</div>
+
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<div>
+1. What Zhongyi do for a symptom? <a href="text/Bencao_by_symptom.html" target="_blank"> click to see </a>
+<pre style="margin-left: 10px"> need es: /opt/elasticsearch-6.4.0/bin/elasticsearch </pre>
+</div>
+
+<div>
+2. How zhong yao catagorized ? <a href="text/zhongyiao.html" target="_blank"> click to see </a>
+<pre style="margin-left: 10px"> need es: /opt/elasticsearch-6.4.0/bin/elasticsearch </pre>
+</div>
+
+<div>
+3. Applied jingluo (2D) <a href="2D/woman1.html" target="_blank"> click to see </a>
+<pre style="margin-left: 10px"> need GeoServer(java 8): cd /opt/tomcat-9.0.12 && bin/startup.sh </pre>
+<p>
+
+<br>
+Neo4J examples:</br>
+4.0. D3 and Neo4j DB <a href="text/D3example.html" target="_blank"> click to see </a>
+</div>
+
+<div>
+4.1. idea of food wisdom 1<a href="text/tree_cluster.html" target="_blank"> click to see </a>
+<pre style="margin-left: 10px"> need neo4j: /opt/neo4j-community-3.5.1/bin/neo4j console </pre>
+4.2. idea of food wisdom 2 <a href="line_v3.html" target="_blank"> v3 </a>
+   or (newer?) <a href="line_v5.html" target="_blank"> v5 </a>
+<pre style="margin-left: 10px"> 
+example 1:
+MATCH p=(s)-->(t) 
+where s.id='甘草' or t.id ='甘草'
+RETURN p
+
+example 2:
+MATCH p=(s:Note)-[r:`恶`]->(t:Note) where s.id='黄连' RETURN p LIMIT 25
+
+example 3: 
+   MATCH p=()-[r:恶]->() RETURN p
+
+example 4:
+MATCH p=(s)-[r:恶]->(t) 
+   where s.id='麻黄' or t.id ='麻黄'
+   RETURN p
+   
+example 5: 
+MATCH p=(s)-->(t) 
+   where s.id='甘草' or t.id ='甘草'
+   RETURN p      
+   
+ </pre>
+</div>
+
+<div>
+5. Applied Jingluo (3D)<a href="3D/jingluo.html" target="_blank"> click to see </a>
+<pre style="margin-left: 10px">  </pre>
+</div>
+
+<div>
+<p>Read, write, correlate: </p>
+6. read notes: <a href="author/note_quill.html" target="_blank"> click to see </a> <p>
+7. read relates: <a href="author/rela_quill.html" target="_blank"> click to see </a>
+<pre style="margin-left: 10px">  </pre>
+</div>
+
+
+</body>
+</html>

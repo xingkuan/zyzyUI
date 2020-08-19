@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+  <title>zhong yiao</title>
+  <script src="../js/d3.v3.min.js"></script>
+  <script src="elasticsearch-js/elasticsearch.js"></script>
+  <script src="../js/zhongyiao.js"></script>
+  <!-- script src="../js/d3.v3.js"></script -->
+  <script src="../js/zhongyiao_rel.js"></script>
+  <style>
+    body {
+      font: 14px sans-serif;
+    }
+
+    #d3Left {
+      width:40%;
+      float: left;
+      display:block;
+    }
+    #esRight {
+      width:60%;
+      float: right;
+      display:block;
+    }
+
+    //d3 tree presentation
+    .node {
+      cursor: pointer;
+    }
+    .node circle {
+      fill: #fff;
+      stroke: steelblue;
+      stroke-width: 3px;
+    }
+    .node text {
+      font: 12px sans-serif;
+    }
+    .link {
+      fill: none;
+      stroke: #ccc;
+      stroke-width: 2px;
+    }
+
+    //es search result
+    .name_cn {
+      color: blue;
+      //font: 12px sans-serif;
+      font-weight: bold;
+    }
+
+    // d3 relation div:
+#d3Relation {
+      width: 500px;
+      height: 600px;
+      float: up;
+      display: block;
+    }
+
+path.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+text {
+  fill: #000;
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+
+  </style>
+</head>
+
+<body>
+  <div id="d3Left">
+    <div id="d3Tree">
+  <script src="../js/zhongyiao_d3.js"></script>
+    </div>
+  <div id="d3Relation" style="width:500px;height:600px">
+  <!-- link rel="import" href="index3.html"/ -->
+  </div>
+
+  </div>
+
+  <div id="esRight">
+    <select id="symptom" onchange="updateSymptomSelection()">
+       <option value="">example sickness</option>
+       <option value="瘀血">瘀血</option>
+       <option value="阴痿">阴痿</option>
+       <option value="口舌疮烂">口舌疮烂</option>
+       <option value="明目益气">明目益气</option>
+       <option value="香港脚">香港脚</option>
+       <option value="惊痫温疟">惊痫温疟</option>
+       <option value="汤火伤灼">汤火伤灼</option>
+       <option value="脾胃虚弱">脾胃虚弱</option>
+       <option value="生津液">生津液</option>
+       <option value="牙痛">牙痛</option>
+       <option value="脱肛">脱肛</option>
+       <option value="癣疮">癣疮</option>
+    </select>
+
+     <div id="esResult">
+     </div>
+  </div>
+</body>
+
+<script>
+  function updateSymptomSelection(){
+    var filter = document.getElementById('symptom').value;
+    //alert(filter);
+    esSearch(filter);
+  }
+
+</script>
+
+
+
+</html>

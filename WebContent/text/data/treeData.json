@@ -1,0 +1,275 @@
+{
+  "name": "功用",
+  "parent": "null",
+  "children": [
+
+    {
+      "name": "解表",
+      "parent": "0",
+      "children": [
+        {
+          "name": "发散风寒",
+          "parent": "01"
+        },
+        {
+          "name": "发散风热",
+          "parent": "01"
+        }
+      ]
+    },
+
+    {
+      "name": "清热",
+      "parent": "0",
+      "children": [
+        {
+          "name": "清热泻火",
+          "parent": "02"
+        },
+        {
+          "name": "清热燥湿",
+          "parent": "02"
+        },
+        {
+          "name": "清热凉血",
+          "parent": "02"
+        },
+        {
+          "name": "清虚热",
+          "parent": "02"
+        }
+      ]
+    },
+
+    {
+      "name": "泻下",
+      "parent": "0",
+      "children": [
+        {
+          "name": "攻下",
+          "parent": "03"
+        },
+        {
+          "name": "润下",
+          "parent": "03"
+        },
+        {
+          "name": "峻下逐水",
+          "parent": "03"
+        }
+      ]
+    },
+
+    {
+      "name": "袪风湿",
+      "parent": "0",
+      "children": [
+        {
+          "name": "袪风寒湿",
+          "parent": "04"
+        },
+        {
+          "name": "袪风湿热",
+          "parent": "04"
+        },
+        {
+          "name": "袪风湿强筋骨",
+          "parent": "04"
+        }
+      ]
+    },
+ 
+    {
+      "name": "化湿",
+      "parent": "0"
+    },
+
+    {
+      "name": "利水渗湿",
+      "parent": "0",
+      "children": [
+        {
+          "name": "利水消肿",
+          "parent": "05"
+        },
+        {
+          "name": "利尿通淋",
+          "parent": "05"
+        },
+        {
+          "name": "利湿退黄",
+          "parent": "05"
+        }
+      ]
+    },
+ 
+    {
+      "name": "理气",
+      "parent": "0"
+    },
+    {
+      "name": "消食",
+      "parent": "0"
+    },
+    {
+      "name": "驱虫",
+      "parent": "0"
+    },
+
+    {
+      "name": "止血",
+      "parent": "0",
+      "children": [
+        {
+          "name": "凉血止血",
+          "parent": "06"
+        },
+        {
+          "name": "化瘀止血",
+          "parent": "06"
+        },
+        {
+          "name": "收敛止血",
+          "parent": "06"
+        },
+        {
+          "name": "温经止血",
+          "parent": "06"
+        }
+      ]
+    },
+
+    {
+      "name": "活血化瘀",
+      "parent": "0",
+      "children": [
+        {
+          "name": "活血止痛",
+          "parent": "07"
+        },
+        {
+          "name": "活血调经",
+          "parent": "07"
+        },
+        {
+          "name": "活血疗伤",
+          "parent": "07"
+        },
+        {
+          "name": "破血消癥",
+          "parent": "07"
+        }
+      ]
+    },
+
+    {
+      "name": "化痰止咳平喘",
+      "parent": "0",
+      "children": [
+        {
+          "name": "温化寒痰",
+          "parent": "08"
+        },
+        {
+          "name": "清化热痰",
+          "parent": "08"
+        },
+        {
+          "name": "止咳平喘",
+          "parent": "08"
+        }
+      ]
+    },
+
+    { 
+      "name": "安神",
+      "parent": "0",
+      "children": [
+        { 
+          "name": "重镇安神",
+          "parent": "09"
+        },
+        {
+          "name": "养心安神",
+          "parent": "09"
+        }
+      ]
+    },
+
+    { 
+      "name": "平肝息风",
+      "parent": "0",
+      "children": [
+        { 
+          "name": "平抑肝阳",
+          "parent": "09"
+        },
+        {
+          "name": "息风止痉",
+          "parent": "09"
+        }
+      ]
+    },
+
+    {
+      "name": "开窍",
+      "parent": "0"
+    },
+
+    {
+      "name": "补虚",
+      "parent": "0",
+      "children": [
+        {
+          "name": "补气",
+          "parent": "010"
+        },
+        {
+          "name": "补阳",
+          "parent": "010"
+        },
+        {
+          "name": "补血",
+          "parent": "010"
+        },
+        {
+          "name": "补阴",
+          "parent": "010"
+        }
+      ]
+    },
+
+    {
+      "name": "收涩",
+      "parent": "0",
+      "children": [
+        {
+          "name": "固表止汗",
+          "parent": "011"
+        },
+        {
+          "name": "敛肺涩肠",
+          "parent": "011"
+        },
+        {
+          "name": "固精缩尿止带",
+          "parent": "011"
+        }
+      ]
+    },
+
+    { 
+      "name": "涌吐",
+      "parent": "0"
+    },
+    { 
+      "name": "攻毒杀虫止痒",
+      "parent": "0"
+    },
+    { 
+      "name": "拔毒化腐生肌",
+      "parent": "0"
+    }
+
+  ]
+}

@@ -1,0 +1,8 @@
+[
+{"relnum": "1", "source":"木", "target":"火", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
+{"relnum": "2", "source":"火", "target":"土", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
+{"relnum": "3", "source":"土", "target":"金", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
+{"relnum": "4", "source":"金", "target":"水", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
+{"relnum": "5", "source":"水", "target":"木", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
+{"relnum": "6", "source":"木", "target":"土", "relationship":"相克", "dist": 250, "charge": -350, "line_type":"L"}
+]

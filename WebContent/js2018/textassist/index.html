@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<title>textAssist</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link href='http://fonts.googleapis.com/css?family=Droid Serif' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" href="styles.css" media="screen">
+<link rel="stylesheet" href="textassist.css" media="screen">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+<script src="textassist.min.js"></script>
+<script>
+$(document).ready(function(){
+
+	function isValidURL(url){
+		var RegExp = /^(([\w]+:)?\/\/)?(([\d\w]|%[a-fA-f\d]{2,2})+(:([\d\w]|%[a-fA-f\d]{2,2})+)?@)?([\d\w][-\d\w]{0,253}[\d\w]\.)+[\w]{2,4}(:[\d]+)?(\/([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)*(\?(&?([-+_~.\d\w]|%[a-fA-f\d]{2,2})=?)*)?(#([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)?$/;
+		return RegExp.test(url);
+	}
+
+	function isValidEmail(email) {
+		var RegExp = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+		return RegExp.test(email);
+	}
+
+	$('body').textAssist({
+		items: [
+			{
+				title: "Go to &quot;{%s}&quot;",
+				classN: "goto",
+				onShow: function(text, offset) {
+					if(!isValidURL(text) || isValidEmail(text)) offset.hide();
+				},
+				onClick: function(text, offset){
+					window.open('http://'+text.replace('http://'));
+				}
+			},
+			{
+				title: "Mail to &quot;{%s}&quot;",
+				classN: "mailto",
+				onShow: function(text, offset) {
+					if(!isValidEmail(text)) offset.hide();
+				},
+				onClick: function(text, offset){
+					window.location.href = 'mailto:'+text;
+				}
+			},
+			{
+				title: "Search for &quot;{%s}&quot;",
+				onClick: function(text, offset){
+					return false;
+				},
+				classN: "search",
+				href: "http://google.com/search?q={%s}",
+				target: "_blank"
+			},
+			{
+				title: "Wikipedia (en)",
+				classN: "wikipedia",
+				href: "http://en.wikipedia.org/w/index.php?title=Special:Search&search={%s}",
+				target: "_blank",
+				onShow: function(text, offset) {
+					if(isValidEmail(text) || (text.length > 50)) offset.hide();
+				}
+			},
+			{
+				title: "Translate",
+				classN: "translate",
+				href: "http://translate.google.com/?q={%s}",
+				target: "_blank",
+				onShow: function(text, offset) {
+					if(isValidEmail(text)) offset.hide();
+				}
+			},
+			{
+				divider: true,
+				onShow: function(text, offset) {
+					if(isValidEmail(text)) offset.hide();
+				}
+			},
+			{
+				title: "Map with Google",
+				classN: "map",
+				href: "http://maps.google.com/maps?q={%s}",
+				onShow: function(text, offset) {
+					if(isValidEmail(text)) offset.hide();
+				}
+			},
+			{
+				divider: true,
+				onShow: function(text, offset) {
+					if(isValidEmail(text)) offset.hide();
+				}
+			},
+			{
+				title: "Email",
+				classN: "email",
+				href: "mailto:someone@some.domain?body={%s}",
+				onShow: function(text, offset) {
+					if(isValidEmail(text)) offset.hide();
+				}
+			}
+		]
+	});
+
+});
+</script>
+</head>
+<body scroll="auto">
+
+<div class="container" id="container">
+	<h1 class="logo">textAssist<span>A powerful and elegant assistant for your users about texts. Select some Words, URLs and Emails from below.</span></h1>
+
+	<hr>
+
+	<h3>Proin ullamcorper congue mauris.</h3>
+	<p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam velit justo, malesuada at, egestas vitae, lacinia nec, mauris. Duis auctor, nisl et venenatis dapibus, turpis risus tempus dolor, at vehicula metus enim et neque. Mauris sed lectus. Maecenas tempor, augue quis tincidunt imperdiet, dolor ante mattis est, sit amet vulputate libero arcu quis turpis. Sed varius, neque sit amet ornare ullamcorper, massa orci vestibulum purus, sit amet ultricies enim purus nonummy nibh. Nullam ultrices. Nam odio. Vestibulum posuere magna. Suspendisse potenti. Cras vitae nunc non tortor euismod rhoncus. Etiam nonummy. Aenean sodales. Suspendisse tempus, mi ac consequat venenatis, lorem sapien scelerisque lacus, sit amet sagittis nunc ante non turpis. Nunc ornare.</p>
+
+	<h3>Quisque suscipit pharetra arcu.</h3>
+	<p>Maecenas tristique placerat enim. Vestibulum felis. Fusce euismod massa vitae sapien. Fusce dui. Pellentesque ut neque a tortor molestie varius. Morbi placerat, wisi vel tristique tincidunt, dui urna blandit leo, in lobortis metus magna sed risus. Nulla non eros. Vivamus tortor. Donec in erat. Ut augue nunc, egestas in, interdum nec, porttitor quis, nunc. Maecenas placerat posuere urna. Nullam et wisi. Nam egestas massa nec dolor. Cras felis leo, tempor a, bibendum vitae, tempus et, dolor. Fusce eleifend, est at laoreet faucibus, leo nulla rhoncus dolor, at tempus purus odio eu lacus. Cras est erat, luctus a, fermentum sit amet, pellentesque vel, nulla. Suspendisse eget enim. Mauris vulputate fringilla erat. Morbi porta. Aenean et diam.</p>
+
+	<h3>Praesent feugiat metus et eros.</h3>
+	<p>In tortor lectus, mattis in, venenatis sed, adipiscing et, mauris. Integer lectus arcu, nonummy quis, ultricies auctor, semper at, nisl. Vestibulum sollicitudin eleifend dui. Sed magna dui, commodo gravida, dapibus nec, commodo quis, enim. In hac habitasse platea dictumst. Curabitur rutrum eleifend velit. Quisque magna. Aenean quis elit. Praesent molestie iaculis turpis. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Quisque tempor ante sit amet augue. Quisque fringilla. Nam facilisis nonummy pede. Praesent pede. Duis ultricies purus nec sapien. Proin condimentum iaculis nunc. Proin lacus libero, semper vel, lobortis ut, fringilla porta, tortor. Aliquam facilisis enim faucibus leo.</p>
+
+	<h3>Contact</h3>
+	<p>If you'd like to contact me directly, please email me at <em>chavroka@yahoo.com</em> and for see my works, please visit at <em>codecanyon.net/user/hemn</em></p>
+
+	<hr>
+	<h1 class="logo"><span>Powered by <a href="http://iprodev.com/">iProDev</a>. For downloading this script, please visit at <a href="http://iprodev.com/">iProDev</a>.</span></h1>
+
+
+
+</div>
+
+</body>
+</html>
