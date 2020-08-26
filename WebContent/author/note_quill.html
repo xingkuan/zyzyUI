@@ -4,152 +4,37 @@
 <meta charset="UTF-8">
 <title>Insert title here</title>
 
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
+
 <script src="quill/quill.min.js" ></script>
 <link href="quill/quill.snow.css" rel="stylesheet">
 <script src="quill/quill.js" ></script>
-
-<script src="../js/jquery-3.3.1.min.js"></script>
-<script src="../js2018/elasticsearch.js"></script>
-<script src="../js2018/d3.js"></script>
 
 <link rel="stylesheet" href="textassist/styles.css" media="screen">
 <link rel="stylesheet" href="textassist/textassist.css" media="screen">
 <script src="textassist/textassist.min.js"></script>
 
+<script src="author.js"></script>
+
 <script>
-/*
-let button = document.querySelector("div");
-button.addEventListener("mousedown", event => {
-  if (event.button == 0) {
-    console.log("Left button");
-  } else if (event.button == 1) {
-    console.log("Middle button");
-  } else if (event.button == 2) {
-    console.log("Right button");
-  }
-});
-*/
-
-$(document).ready(function () { 
-//	getRelationList(); 
-	setupTemplateList("srcTempList");
-//	$('#srcTempList').hide();
-///
-	function isValidURL(url){
-		var RegExp = /^(([\w]+:)?\/\/)?(([\d\w]|%[a-fA-f\d]{2,2})+(:([\d\w]|%[a-fA-f\d]{2,2})+)?@)?([\d\w][-\d\w]{0,253}[\d\w]\.)+[\w]{2,4}(:[\d]+)?(\/([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)*(\?(&?([-+_~.\d\w]|%[a-fA-f\d]{2,2})=?)*)?(#([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)?$/;
-		return RegExp.test(url);
-	}
-
-	function isValidEmail(email) {
-		var RegExp = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
-		return RegExp.test(email);
-	}
-
-
-});
+	$(document).ready(function () { 
+		setupOptionField("srcTempList","/zyzySvc/reader/template/getList","val")
+	//	$('#srcTempList').hide();
+	/* seems not used
+		function isValidURL(url){
+			var RegExp = /^(([\w]+:)?\/\/)?(([\d\w]|%[a-fA-f\d]{2,2})+(:([\d\w]|%[a-fA-f\d]{2,2})+)?@)?([\d\w][-\d\w]{0,253}[\d\w]\.)+[\w]{2,4}(:[\d]+)?(\/([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)*(\?(&?([-+_~.\d\w]|%[a-fA-f\d]{2,2})=?)*)?(#([-+_~.\d\w]|%[a-fA-f\d]{2,2})*)?$/;
+			return RegExp.test(url);
+		}
 	
-
-
-
-	// build the "relation" dropdown box:
-	// .. get the values:
-/*	function getRelationList() {
-                    $.ajax({
-                        type: "GET",
-                        url: "zyzySvc/reader/relation/get",
-                        data: "",
-                        dataType: "json",
-                        contentType: "application/json",
-                        success: function(data) {
-                            populateRelBox(data);
-                        },
-            			error : function(jqXHR, textStatus, errorThrown) {
-            				alert('error: ' + textStatus + errorThrown);
-            			}
-                    });
-	}
-	// .. and build the dropdown box:
-	function populateRelBox(data) {
-		var options = $('#selRelation');
-		$.each( data, function(i) {
-			//alert('val, text: ' + data[i].val + ", " + data[i].text);
-   			options.append(
-        		'<option style="height:5px;" value="' + data[i].val + '">' + data[i].text + '</option>'
-    		);
-		});
-	}	
-*/
-
-	// .... functions for handling template
-	// steup the template list:
-	function setupTemplateList(elementID) {
-                    $.ajax({
-                        type: "GET",
-                        url: "/zyzySvc/reader/template/getList",
-                        data: "",
-                        //dataType: "json",
-                        contentType: "text/plain",
-                        success: function(data) {
-			 	      		//alert('elID 2: ' + elementID);
-                    		//var tempList = document.getElementById(elID);
-                    		//let id = "#" + "srcTempList";
-                    		let id = "#" + elementID;
-                    		var tempList = $(id);
-                    		$.each( data, function(i) {
-                       			tempList.append(
-                            		'<option value="' + data[i].name + '">' + data[i].name + '</option>'
-                        		);
-                    		});
-                        },
-            			error : function(jqXHR, textStatus, errorThrown) {
-            				alert('error: ' + textStatus + errorThrown);
-            			}
-                    });
-	}
-
-	function setNoteD(sec, val){
-		//alert("srcSetup: " + emID + ", " + val);
-		var textContainer;
-		if(sec=="src")
-			textContainer=src;
-		else if(sec=="tgt")
-			textContainer=tgt;
-		else
-			alert("invalid container!");
-	    $.ajax({
-	        type: "GET",
-	        url: "/zyzySvc/reader/note/get/"+val,
-	        data: "",
-	        dataType: "text",
-	        contentType: "application/text",
-	        success: function(data) {
-	        	//alert(data);
-	        	if(data != null){
-				//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
-	    		//document.getElementById(sec+"Note").value = rslt;
-	    		//$('#'+sec+'Note').html(data);
-	    		//textContainer.clipboard.dangerouslyPasteHTML(data, 'api');
-	    		json=JSON.parse(data);
-	    		note=json.val;
-	    		meta=json.meta;
-	    		template=json.template;
-	    		$('#srcMeta').text(meta);
-	    		textContainer.clipboard.dangerouslyPasteHTML(note, 'api');
-	    		setSelectedIndex(document.getElementById('srcTempList'),template);
-
-	        }else{
-	        	let el="#"+sec+"TempList";
-	        	//alert(el);
-	        	$(el).show();
-	        	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
-	        }
-	        },
-			error : function(jqXHR, textStatus, errorThrown) {
-				alert('error: ' + textStatus + errorThrown);
-			}
-	    });
-	}
-
+		function isValidEmail(email) {
+			var RegExp = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+			return RegExp.test(email);
+		}
+	*/
+	});
+	
 	function setSelectedIndex(s, v) {
 	    for ( var i = 0; i < s.options.length; i++ ) {
 	        if ( s.options[i].text == v ) {
@@ -159,29 +44,6 @@ $(document).ready(function () {
 	    }
 	}
 
-	// dynamically get the template
-	function setTemplateD(txtID, tempID) {
-		//alert(tempID);
-        $.ajax({
-            type: "GET",
-            url: "/zyzySvc/reader/template/get/"+tempID,
-            data: "",
-            //dataType: "text",
-            //contentType: "application/json",
-            success: function(data) {
-            	//src.setText(data, 'api');
-            	//src.clipboard.dangerouslyPasteHTML(data, 'api');
-            	//$('#'+txtID).html(data);
-                $('#'+txtID).text(data);
-        		//document.getElementById(txtID).value = data;
-            },
-			error : function(jqXHR, textStatus, errorThrown) {
-				alert('error: ' + textStatus + errorThrown);
-			}
-        });
-	}
-	
-	
 	function addNote() {
 		//rem alert('to create... \nsrc: ' + $('#srcNote').val() + '\n...tgt: ' +  $('#tgtNote').val() + "\n...relation:" + $('#selRelation option:selected').val());
 		//rem console.log('add a note');
@@ -228,7 +90,7 @@ $(document).ready(function () {
 				meta:	$('#srcMeta').text(),
 				//note: 	$('#srcNote').html()
 				//note: 	editor.root.innerHTML,
-				note: 	src.root.innerHTML,
+				note: 	srcText.root.innerHTML,
 			}	
 		};
 		
@@ -255,96 +117,90 @@ $(document).ready(function () {
 </script>
 
 <style>
-#editor-container {
-  height: 375px;
-}
+	#editor-container {
+	  height: 375px;
+	}
+	
+	.ql-snow span.ql-picker.ql-box {
+	    width: 18px;
+	}
+	
+	.ql-button {
+	    text-align: center;
+	    text-decoration: none;
+	    font-size: 12px;
+	}
+  	.sec-title {
+	    font-weight: bold;
+	}
+  	.sec-text {
+	    font-weight: normal;
+	}
+	
+	.noteSec {
+		padding-left: 5 px;
+	    font-weight: bold;
+		font-size: 12px;
+		color: red;
+	}
 
-
-
-.ql-snow span.ql-picker.ql-box {
-    width: 18px;
-}
-
-.ql-button {
-    text-align: center;
-    text-decoration: none;
-    font-size: 12px;
-}
-  .sec-title {
-    font-weight: bold;
-  }
-  .sec-text {
-    font-weight: normal;
-  }
-
-.noteSec {
-       padding-left: 5 px;
-       	font-weight: bold;
-	font-size: 12px;
-	color: red;
-    }
-
-select {
-padding:2px;
-margin-top:2px;
-line-height:1;
-border-radius:2px;
-outline:none
-}
-option {
-padding:2px;
-margin-top:2px;
-line-height:0;
-border-radius:2px;
-outline:none
-}
-
-
-
-div.oTitle { 
-	font-weight: bold;
-	font-size: 30px;
-	height: 30px;
-	width: 100px;
-}
-
-
-.row:after {
-  content: "";
-  display: table;
-  clear: both;
-}
-.column-1, .column-2 {
-  float: left;
-  position: relative;
-}
-.column-1 {
-  width: 100px;
-  margin-top:10px;
-}
-.column-2 {
-	width: 80%;
-	margin-top: 10px;
-}
-
-.editMeta {
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-  display: inline-block;
-  float: left;
-  height: 100px;
-  width: 100%;
-}
-
-.editorContainer {
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-  display: inline-block;
-  float: left;
-  height: 400px;
-  width: 100%;
-}
-
+	select {
+		padding:2px;
+		margin-top:2px;
+		line-height:1;
+		border-radius:2px;
+		outline:none
+	}
+	option {
+		padding:2px;
+		margin-top:2px;
+		line-height:0;
+		border-radius:2px;
+		outline:none
+	}
+	
+	div.oTitle { 
+		font-weight: bold;
+		font-size: 30px;
+		height: 30px;
+		width: 100px;
+	}
+	
+	.row:after {
+	  content: "";
+	  display: table;
+	  clear: both;
+	}
+	.column-1, .column-2 {
+	  float: left;
+	  position: relative;
+	}
+	.column-1 {
+	  width: 100px;
+	  margin-top:10px;
+	}
+	.column-2 {
+		width: 80%;
+		margin-top: 10px;
+	}
+	
+	.editMeta {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 100px;
+	  width: 100%;
+	}
+	
+	.editorContainer {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 400px;
+	  width: 100%;
+	}
 </style>
 
 </head>
@@ -356,17 +212,40 @@ div.oTitle {
 <div id="srcRowName" class="row" >
   <div class="column-1">Name:</div> 
   <div class="column-2">
+	<script>
+		function setupSrcFn(){
+			note=jsonData[0].val;
+			meta=jsonData[0].meta;
+			template=jsonData[0].template;   
+			$("#srcMeta").text(meta); 
+			srcText.clipboard.dangerouslyPasteHTML(note, "api");
+			setSelectedIndex(document.getElementById("srcTempList"),template);
+		}
+		
+		function setupSrcFnX(){
+	       	$("#TempList").show();
+	       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
+		}
+	</script>
 	<input type="text" size="40" style="margin-left:0px" id="srcName" name="srcName" 
 		placeholder=" ... enter subject name" 
-		onchange='setNoteD("src", this.value)'>
+  		onchange='setTextFields("/zyzySvc/reader/note/get/"+this.value, setupSrcFn, setupSrcFnX)'>   
 	</input>
   </div>
 </div>
 
 <div id="srcRowMeta" class="row">
+	<script>
+		function setupTpltFn(){
+			meta=template=jsonData[0]["template"];
+			$("#srcMeta").text(meta); 
+		}
+	</script>
+  	 <!--   onchange='setTextFld0("srcMeta", "/zyzySvc/reader/template/get/"+this.options[this.selectedIndex].text, "template")'  -->
   <div class="column-1">Meta:
-  	<select id="srcTempList"  onchange='setTemplateD("srcMeta", this.value)'>
-	  <option style="font-weight: bold; color: red" value="" selected >select ...</option>
+  	<select id="srcTempList" name="srcTempList"  
+  	   onchange='setTextFields("/zyzySvc/reader/template/get/"+this.options[this.selectedIndex].text, setupTpltFn, null)'>
+	   <option style="font-weight: bold; color: red" value="" selected >select ...</option>
 	</select>
   </div> 
   <div class="column-2">
@@ -416,7 +295,7 @@ div.oTitle {
   });
   Quill.register(boxAttributor);
 
-  var src = new Quill('#srcNote', {
+  var srcText = new Quill('#srcNote', {
 	modules: {
 	  toolbar: {
 		container: '#srcToolbar'
@@ -426,13 +305,13 @@ div.oTitle {
 	  theme: 'snow'  // or 'bubble', or 'snow'
 	});
 
-  src.on('selection-change', function(range, oldRange, source) {
+  srcText.on('selection-change', function(range, oldRange, source) {
 	  if (range) {
 	    if (range.length == 0) {
 	    	sel="";
 	      console.log('User cursor is on', range.index);
 	    } else {
-	      var text = src.getText(range.index, range.length);
+	      var text = srcText.getText(range.index, range.length);
 	      sel=text;
 	      console.log('User has highlighted', text);
 	      //let's popup a custom menu, by clicking on a button in the bar?
@@ -459,8 +338,8 @@ div.oTitle {
 	  }
 
   $('.cust-clear').click(function(ev) {
-	    var range = src.getSelection();
-	    src.removeFormat(range.index, range.length);
+	    var range = srcText.getSelection();
+	    srcText.removeFormat(range.index, range.length);
 	  });
 </script>
 

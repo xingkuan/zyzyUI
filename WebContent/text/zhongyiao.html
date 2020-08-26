@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <head>
   <title>zhong yiao</title>
-  <script src="../d3JS/d3.v3.min.js"></script>
+  <script src="../d3JS/d3.min.js"></script>
   <script src="../elasticsearch-js/elasticsearch.js"></script>
   <script src="zhongyiao_nod.js"></script>
-  <!-- script src="../js/d3.v3.js"></script -->
-  <script src="zhongyiao_rel.js"></script>
+  <!-- script src="zhongyiao_force.js"></script  -->
+    <script src="forceLink.js"></script>
+  <script src="zhongyiao_tree.js"></script>
   <style>
     body {
       font: 14px sans-serif;
@@ -48,30 +49,28 @@
       font-weight: bold;
     }
 
-#d3Relation {
-      width: 500px;
-      height: 600px;
+	#d3Relation {
+      width: 400px;
+      height: 500px;
       float: up;
       display: block;
     }
 
-path.link {
-  fill: none;
-  stroke: #666;
-  stroke-width: 1.5px;
-}
-
-circle {
-  fill: #ccc;
-  stroke: #fff;
-  stroke-width: 1.5px;
-}
-
-text {
-  fill: #000;
-  font: 10px sans-serif;
-  pointer-events: none;
-}
+	path {
+	  fill: none;
+	}
+	
+	circle {
+	  fill: #ccc;
+	  stroke: #fff;
+	  stroke-width: 1.5px;
+	}
+	
+	text {
+	  fill: #000;
+	  font: 10px sans-serif;
+	  pointer-events: none;
+	}
 
   </style>
 </head>
@@ -79,12 +78,14 @@ text {
 <body>
   <div id="d3Left">
     <div id="d3Tree">
-  <script src="../js/zhongyiao_d3.js"></script>
+  <script>
+  showTreeTest("data/treeData.json", "#d3Tree");
+  </script>
     </div>
-  <div id="d3Relation" style="width:500px;height:600px">
-  <!-- link rel="import" href="index3.html"/ -->
-  </div>
-
+  <!-- <div id="d3Relation" style="width:500px;height:600px">
+  </div>   -->
+<svg id='d3Relation'></svg>
+  <script>showForceLink("data/lsrel3.json", "#d3Relation");  </script>
   </div>
 
   <div id="esRight">
@@ -115,9 +116,7 @@ text {
     //alert(filter);
     esSearch(filter);
   }
-
+  
 </script>
-
-
 
 </html>

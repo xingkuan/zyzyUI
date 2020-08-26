@@ -1,93 +1,23 @@
-<!DOCTYPE html>
-<meta charset="UTF-8">
-<style>
-
-.node circle {
-  fill: #fff;
-  stroke: steelblue;
-  stroke-width: 3px;
-}
-
-.node text {
-  font: 12px sans-serif;
-}
-
-.link {
-  fill: none;
-  stroke: #ccc;
-  stroke-width: 2px;
-}
-
-</style>
-
-<body>
-
-<!-- load the d3.js library -->	
-<script src="../d3JS/d3.min.js"></script>
-<script>
-
-var treeData =
-  {
-    "name": "Top Level",
-    "children": [
-      { 
-        "name": "Level 2: A",
-        "children": [
-          { "name": "Son of A" },
-          { "name": "Daughter of A" }
-        ]
-      },
-      { "name": "Level 2: B" }
-    ]
-  };
-
-// Set the dimensions and margins of the diagram
-var margin = {top: 20, right: 90, bottom: 30, left: 90},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
-
-// append the svg object to the body of the page
-// appends a 'group' element to 'svg'
-// moves the 'group' element to the top left margin
-var svg = d3.select("body").append("svg")
-    .attr("width", width + margin.right + margin.left)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate("
-          + margin.left + "," + margin.top + ")");
+// ************** tree diagram    *****************
+var margin = {top: 10, right: 120, bottom: 10, left: 40},
+    width = 400 - margin.right - margin.left,
+    height = 400 - margin.top - margin.bottom;
 
 var i = 0,
     duration = 750,
-    root;
+    theRoot,
+	theSvg;
+// a tree layout and assigns the size
+var treemap = d3.tree()
+      .size([height, width]);
 
-// declares a tree layout and assigns the size
-var treemap = d3.tree().size([height, width]);
 
-// Assigns parent, children, height, depth
-root = d3.hierarchy(treeData, function(d) { return d.children; });
-root.x0 = height / 2;
-root.y0 = 0;
 
-// Collapse after the second level
-root.children.forEach(collapse);
 
-update(root);
-
-// Collapse the node and all it's children
-function collapse(d) {
-  if(d.children) {
-    d._children = d.children
-    d._children.forEach(collapse)
-    d.children = null
-  }
-}
-
-function update(source) {
-
+function updateTree(source) {
   // Assigns the x and y position for the nodes
-  var treeData = treemap(root);
+  var treeData = treemap(theRoot);
 
-  // Compute the new tree layout.
   var nodes = treeData.descendants(),
       links = treeData.descendants().slice(1);
 
@@ -95,28 +25,32 @@ function update(source) {
   nodes.forEach(function(d){ d.y = d.depth * 180});
 
   // ****************** Nodes section ***************************
-
-  // Update the nodes...
-  var node = svg.selectAll('g.node')
+  // update node. What's for?[2020.08.22]
+  var node = theSvg.selectAll('g.node')
       .data(nodes, function(d) {return d.id || (d.id = ++i); });
-
-  // Enter any new modes at the parent's previous position.
+  //add transfomr: <g class="node" transfomr= ...
+  // <g ...> 
+  //    <g class="node" transfomr= ..> ..</g>
+  // </g>
   var nodeEnter = node.enter().append('g')
       .attr('class', 'node')
       .attr("transform", function(d) {
         return "translate(" + source.y0 + "," + source.x0 + ")";
     })
     .on('click', click);
-
-  // Add Circle for the nodes
+  // .. <g class="node" transfomr= ..>
+  //      <circle ...><circle>
+  // .. </g>
   nodeEnter.append('circle')
       .attr('class', 'node')
       .attr('r', 1e-6)
       .style("fill", function(d) {
           return d._children ? "lightsteelblue" : "#fff";
       });
-
-  // Add labels for the nodes
+  // .. <g class="node" transfomr= ..>
+  //      <circle ...><circle>
+  //      <text ...>...<text>
+  // .. </g>
   nodeEnter.append('text')
       .attr("dy", ".35em")
       .attr("x", function(d) {
@@ -145,7 +79,6 @@ function update(source) {
     })
     .attr('cursor', 'pointer');
 
-
   // Remove any exiting nodes
   var nodeExit = node.exit().transition()
       .duration(duration)
@@ -163,19 +96,18 @@ function update(source) {
     .style('fill-opacity', 1e-6);
 
   // ****************** links section ***************************
-
-  // Update the links...
-  var link = svg.selectAll('path.link')
+  //update link(?)
+  var link = theSvg.selectAll('path.link')
       .data(links, function(d) { return d.id; });
-
-  // Enter any new links at the parent's previous position.
+  // <g ...> 
+  //    <path class="link" transfomr= ..> ..</g>
+  // </g>
   var linkEnter = link.enter().insert('path', "g")
       .attr("class", "link")
       .attr('d', function(d){
         var o = {x: source.x0, y: source.y0}
         return diagonal(o, o)
       });
-
   // UPDATE
   var linkUpdate = linkEnter.merge(link);
 
@@ -191,37 +123,65 @@ function update(source) {
         var o = {x: source.x, y: source.y}
         return diagonal(o, o)
       })
-      .remove();
+      .remove();	
 
-  // Store the old positions for transition.
-  nodes.forEach(function(d){
-    d.x0 = d.x;
-    d.y0 = d.y;
-  });
 
-  // Creates a curved (diagonal) path from parent to the child nodes
-  function diagonal(s, d) {
 
-    path = `M ${s.y} ${s.x}
+	// Stash the old positions for transition.
+	nodes.forEach(function(d) {
+	    d.x0 = d.x;
+	    d.y0 = d.y;
+	  });
+
+	//to be used as CSS attrib. value
+	function diagonal(s, d) {
+	    path = `M ${s.y} ${s.x}
             C ${(s.y + d.y) / 2} ${s.x},
               ${(s.y + d.y) / 2} ${d.x},
               ${d.y} ${d.x}`
-
-    return path
-  }
-
-  // Toggle children on click.
-  function click(d) {
-    if (d.children) {
-        d._children = d.children;
-        d.children = null;
-      } else {
-        d.children = d._children;
-        d._children = null;
-      }
-    update(d);
-  }
+	    return path
+	}
+	// Toggle children on click.
+	function click(d) {
+		if (d.children) {
+	       	d._children = d.children;
+	       	d.children = null;
+			esSearchTags(d.data.name);
+		} else {
+	       	//alert(d.name);
+	       	// just to be nice: clean up the selectiong
+	       	document.getElementById('symptom').selectedIndex = 0;
+	       	esSearchTags(d.data.name);
+	       	d.children = d._children;
+	      	d._children = null;
+		}
+		updateTree(d);
+	}
 }
 
-</script>
-</body>
+
+
+/***set the svg, load data and get go ...*****/
+//d3.select(self.frameElement).style("height", "500px");
+function showTreeTest(dataUrl, htmlEl){
+//"data/treeData.json", "#d3Tree" 
+d3.json(dataUrl).then(function(data) {
+	//var svg = d3.select("body").append("svg")
+	theSvg = d3.select(htmlEl).append("svg")
+        .attr("width", width + margin.right + margin.left)
+        .attr("height", height + margin.top + margin.bottom)
+		.call(d3.zoom().on("zoom", function () {       //zoom and pan
+       		theSvg.attr("transform", d3.event.transform)
+   		 }))
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	// Assigns parent, children, height, depth
+	theRoot = d3.hierarchy(data, function(d) { return d.children; });
+	theRoot.x0 = height / 2;
+	theRoot.y0 = 0;
+
+    updateTree(theRoot);
+
+})
+}
