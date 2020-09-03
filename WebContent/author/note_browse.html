@@ -9,67 +9,6 @@
 <script src="../d3JS/d3.js"></script>
 
 <script src="author.js"></script>
-
-<script>
-	$(document).ready(function() {
-	    var i = 215;
-	    loadData(i);
-	    $('#seqNum').val(i);
-	//});
-	    $('#next').on('click', function () {
-	        //console.log(i + "next");
-	        i += 5;
-	        $('#seqNum').val(i);
-	        loadData(i);
-	    });
-	    $('#prev').on('click', function () {
-	        //console.log("prev" + i);
-	        i -= 5;
-	        $('#seqNum').val(i);
-	        loadData(i);
-	    });
-	
-	    $('#seqNum').on('change', function () {
-	        i = parseInt($('#seqNum').val());
-	        //console.log(i);
-	        loadData(i);
-	    });
-	});	    
-/*
-	function loadData(id){
-		//alert("load seq: " + id);
-	    $.ajax({
-	        type: "GET",
-	        url: "/zyzySvc/reader/note/getByID/"+id,
-	        data: "",
-	     //   dataType: "text",
-	     //   contentType: "application/text",
-	        success: function(data) {
-	        	//alert(data);
-				//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
-	    		//document.getElementById(sec+"Note").value = rslt;
-	    	//	json=JSON.parse(data);
-	    		$('#noteTitle').html(data[0].name);
-	    		$('#noteMeta').html(data[0].meta);
-	    		$('#noteContent').html(data[0].val);
-	        },
-			error : function(jqXHR, textStatus, errorThrown) {
-				alert('error: ' + textStatus + errorThrown);
-			}
-	    });
-	}
-*/
-	function loadData(id){
-		setTextFields("/zyzySvc/reader/note/getByID/"+id,
-    		function(){
-	    		$('#noteMeta').html(jsonData[0]["meta"]);
-				$('#noteTitle').html(jsonData[0]["name"]);
-				$('#noteContent').html(jsonData[0]["val"]);
-			}, 
-			null);
-    }
-	
-</script>
 <style>
 #btns {
     padding-left: 5 px;
@@ -97,6 +36,44 @@
 }
 
 </style>
+
+<script>
+	$(document).ready(function() {
+	    var i = 215;
+	    loadData(i);
+	    $('#seqNum').val(i);
+	//});
+	    $('#next').on('click', function () {
+	        //console.log(i + "next");
+	        i += 5;
+	        $('#seqNum').val(i);
+	        loadData(i);
+	    });
+	    $('#prev').on('click', function () {
+	        //console.log("prev" + i);
+	        i -= 5;
+	        $('#seqNum').val(i);
+	        loadData(i);
+	    });
+	
+	    $('#seqNum').on('change', function () {
+	        i = parseInt($('#seqNum').val());
+	        //console.log(i);
+	        loadData(i);
+	    });
+	});	    
+
+	function loadData(id){
+		setTextFields("/zyzySvc/reader/note/getByID/"+id+"/0",
+    		function(){
+	    		$('#noteMeta').html(jsonData[0]["meta"]);
+				$('#noteTitle').html(jsonData[0]["name"]);
+				$('#noteContent').html(jsonData[0]["val"]);
+			}, 
+			null);
+    }
+	
+</script>
 
 </head>
 

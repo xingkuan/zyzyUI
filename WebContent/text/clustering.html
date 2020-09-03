@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tree and cluster</title>
+<style>
+    #leftPan {
+      position: fixed;
+      width:40%;
+      height: 400px;
+      display:block;
+    }
+    #rightPan {
+      width:60%;
+      height: 400px;
+      float: right;
+      display:block;
+    }
+    
+	.node circle {
+	  fill: #fff;
+	  stroke: steelblue;
+	  stroke-width: 1px;
+	}
+	.node text {
+	  font: 8px sans-serif;
+	}
+	.link {
+	  fill: none;
+	  stroke: #ccc;
+	  stroke-width: 1px;
+	}
+</style>
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../d3JS/d3.min.js"></script>
+<script src="esTree.js"></script>
+<script src="dbClustering.js"></script>
+</head>
+<body>
+<div id="leftPan">
+    <svg id="d3Tree" style="width:100%;height:100%" >
+	  <script>
+/*	  	let clickFn = {	//alert(d.data.name);
+	  			let keyColl = "";
+	  			let p = d;
+	  			while (p.depth > 1) {
+	  				keyColl = '|' + p.data.name + keyColl;
+	  				p = p.parent;
+	  			}
+	  			//now, p is at the top. Add it to the name:
+	  			keyColl = p.data.name + keyColl;
+	  			recluster;}
+	  			*/
+	  			let clickFn=null;
+		esTree("#d3Tree", "/zyzySvc/reader/bbList/getBB", clickFn);
+	  </script>
+    </svg>
+</div>
+<div id="rightPan">
+	<svg id="d3Cluster" width="100%" height="100%">
+	  <script>
+		VisualizeClustering("#d3Cluster", "/zyzySvc/reader/hbList/getHB");
+	  </script>
+	</svg>
+</div>
+
+</body>
+</html>

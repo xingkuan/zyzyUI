@@ -130,8 +130,17 @@
 	    text-decoration: none;
 	    font-size: 12px;
 	}
-  	.sec-title {
+  	.sec-title1 {
 	    font-weight: bold;
+	    font-size: 20px;
+	}
+  	.sec-title2 {
+	    font-weight: bold;
+	    font-size: 16px;
+	}
+  	.sec-title3 {
+	    font-weight: bold;
+	    font-size: 14px;
 	}
   	.sec-text {
 	    font-weight: normal;
@@ -226,11 +235,15 @@
 	       	$("#TempList").show();
 	       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
 		}
+		
+		function setNoteField(){
+			var x = document.getElementById("srcName").value;
+			setTextFields("/zyzySvc/reader/note/get/"+x, setupSrcFn, setupSrcFnX);
+		}
 	</script>
 	<input type="text" size="40" style="margin-left:0px" id="srcName" name="srcName" 
 		placeholder=" ... enter subject name" 
-  		onchange='setTextFields("/zyzySvc/reader/note/get/"+this.value, setupSrcFn, setupSrcFnX)'>   
-	</input>
+  		onchange="setNoteField()">
   </div>
 </div>
 
@@ -259,38 +272,68 @@
 	</div>
 	<div class="column-2">
 		<div id="srcToolbar">
-		  <button class="ql-button" value="title">H</button>
-		  <button class="ql-button" value="text">T</button>
-		    <span class="ql-formats">
-    <button class="ql-align" value=""></button>
-    <button class="ql-align" value="center"></button>
-    <button class="ql-align" value="right"></button>
-    <button class="ql-align" value="justify"></button>
+		  <span class="ql-formats">
+    <select class="ql-size">
+      <option value="10px">Small</option>
+      <option selected>Normal</option>
+      <option value="18px">Large</option>
+      <option value="32px">Huge</option>
+    </select>
   </span>
-  <button class="cust-clear" title="Clear Formatting">X</button>
+  
+    <span class="ql-formats">
+    <select class="ql-color">
+      <option selected></option>
+      <option value="red"></option>
+      <option value="orange"></option>
+      <option value="yellow"></option>
+      <option value="green"></option>
+      <option value="blue"></option>
+      <option value="purple"></option>
+    </select>
+    
+		  <button class="ql-button" value="title1">H1</button>   <!-- the format will be class "sec-title" -->
+		  <button class="ql-button" value="title2">H2</button>   <!-- the format will be class "sec-title" -->
+		  <button class="ql-button" value="title3">H3</button>   <!-- the format will be class "sec-title" -->
+		  <button class="ql-button" value="text">T</button>    <!-- the format will be class "sec-text" -->
+		  <span class="ql-formats">
+		    <button class="ql-align" value=""></button>
+		    <button class="ql-align" value="center"></button>
+		    <button class="ql-align" value="right"></button>
+		    <button class="ql-align" value="justify"></button>
+		  </span>
+		  <button class="cust-clear" title="Clear Formatting">X</button>
 		  <button class="ql-button" value="link" onclick="toCreateRelated()">R</button>
 		</div>
-		<div id="srcNote" class="editorContainer">
-		</div>
-<!--  button onclick="logHtmlContent(src)">Log content as HTML</button  -->
+		<div id="srcNote" class="editorContainer"></div>
+		<!--  button onclick="logHtmlContent(src)">Log content as HTML</button  -->
 	</div>
 </div>			
 
 <div id="rowAct" class="row">
-  <div class="column-1">
-  </div>
-  <div class="column-2">
+	<div class="column-1">
+	</div>
+	<div class="column-2">
 	<input type="submit" value="addNote">
-  </div>
+	</div>
 </div>		
 </form>
 
-
 <script>
+
+var BackgroundClass = Quill.import('attributors/class/background');
+var ColorClass = Quill.import('attributors/class/color');
+var SizeStyle = Quill.import('attributors/style/size');
+Quill.register(BackgroundClass, true);
+Quill.register(ColorClass, true);
+Quill.register(SizeStyle, true);
+
+
+
   const Parchment = Quill.import('parchment')
   var boxAttributor = new Parchment.Attributor.Class('button', 'sec', {
     scope: Parchment.Scope.INLINE,
-    whitelist: ['text', 'title', 'link'],
+    whitelist: ['text', 'title1','title2','title3', 'link'],
 
   });
   Quill.register(boxAttributor);

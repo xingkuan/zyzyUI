@@ -30,7 +30,7 @@ text {
     <BODY>
 <script type="text/javascript">
 //d3.csv("data/lsrel.csv", function(error, links) {
-d3.json("data/lsrel.json", function(error, links) {
+d3.json("data/lsrel.json").then(function(error, links) {
 //?? "links" have an epmty line, which generate an extra node.
 //?? how can you remove it?
 var nodes = {};

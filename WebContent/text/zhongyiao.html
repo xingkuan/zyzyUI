@@ -7,22 +7,23 @@
   <title>zhong yiao</title>
   <script src="../d3JS/d3.min.js"></script>
   <script src="../elasticsearch-js/elasticsearch.js"></script>
-  <script src="zhongyiao_nod.js"></script>
+  <script src="esBasic.js"></script>
   <!-- script src="zhongyiao_force.js"></script  -->
-    <script src="forceLink.js"></script>
-  <script src="zhongyiao_tree.js"></script>
+    <script src="esForceLink.js"></script>
+  <script src="esTree.js"></script>
   <style>
     body {
       font: 14px sans-serif;
     }
 
     #d3Left {
-      width:40%;
+      position: fixed;
+      width:45%;
       float: left;
       display:block;
     }
     #esRight {
-      width:60%;
+      width:55%;
       float: right;
       display:block;
     }
@@ -77,15 +78,28 @@
 
 <body>
   <div id="d3Left">
-    <div id="d3Tree">
-  <script>
-  showTreeTest("data/treeData.json", "#d3Tree");
-  </script>
-    </div>
-  <!-- <div id="d3Relation" style="width:500px;height:600px">
-  </div>   -->
-<svg id='d3Relation'></svg>
-  <script>showForceLink("data/lsrel3.json", "#d3Relation");  </script>
+    <svg id="d3Tree" style="width:100%;height:400px" >
+	  <script>
+	//  showTree("data/treeData.json", "#d3Tree", function(d){esJiaoCaiSearchTags(d.data.name, "#esResult");});
+
+	  //showTree("data/treeData.json", "#d3Tree", esJiaoCaiSearchTags);
+	  let esJiaoCaiSearchTagsFn = esJiaoCaiSearchTags.bind(null, "#esResult");
+	  esTree("#d3Tree", "data/treeData.json", esJiaoCaiSearchTagsFn);
+		/* TODO: The click function need be passed as a parameter 
+		*/
+
+	  </script>
+    </svg>
+    <!-- <div id="d3Relation" style="width:500px;height:600px">
+    </div>   -->
+	<svg id='d3Relation' style="width:100%;height:400px" >
+		<script>
+			let esJiaoCaiSearchFn = esJiaoCaiSearch.bind(null, "#esResult");
+			esForceLink("#d3Relation", "data/lsrel3.json", esJiaoCaiSearchFn);  
+		</script>
+		/* TODO:  The click function need be passed as a parameter 
+		*/
+	</svg>
   </div>
 
   <div id="esRight">
@@ -104,19 +118,18 @@
        <option value="脱肛">脱肛</option>
        <option value="癣疮">癣疮</option>
     </select>
-
-     <div id="esResult">
-     </div>
+	<script>
+	  function updateSymptomSelection(){
+	    var filter = document.getElementById('symptom').value;
+	    //alert(filter);
+	    esJiaoCaiSearch("#esResult", filter);
+	  }
+	</script>
+    <div id="esResult">
+    </div>
   </div>
 </body>
 
-<script>
-  function updateSymptomSelection(){
-    var filter = document.getElementById('symptom').value;
-    //alert(filter);
-    esSearch(filter);
-  }
-  
-</script>
+
 
 </html>

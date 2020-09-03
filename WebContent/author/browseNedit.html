@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
+
+<script src="quill/quill.min.js" ></script>
+<link href="quill/quill.snow.css" rel="stylesheet">
+<script src="quill/quill.js" ></script>
+
+<link rel="stylesheet" href="textassist/styles.css" media="screen">
+<link rel="stylesheet" href="textassist/textassist.css" media="screen">
+<script src="textassist/textassist.min.js"></script>
+
+<script src="author.js"></script>
+<style>
+	#editor-container {
+	  height: 375px;
+	}
+	
+	.ql-snow span.ql-picker.ql-box {
+	    width: 18px;
+	}
+	
+	.ql-button {
+	    text-align: center;
+	    text-decoration: none;
+	    font-size: 12px;
+	}
+  	.sec-title1 {
+	    font-weight: bold;
+	    font-size: 20px;
+	}
+  	.sec-title2 {
+	    font-weight: bold;
+	    font-size: 16px;
+	}
+  	.sec-title3 {
+	    font-weight: bold;
+	    font-size: 14px;
+	}
+  	.sec-text {
+	    font-weight: normal;
+	}
+	
+	.noteSec {
+		padding-left: 5 px;
+	    font-weight: bold;
+		font-size: 12px;
+		color: red;
+	}
+
+	select {
+		padding:2px;
+		margin-top:2px;
+		line-height:1;
+		border-radius:2px;
+		outline:none
+	}
+	option {
+		padding:2px;
+		margin-top:2px;
+		line-height:0;
+		border-radius:2px;
+		outline:none
+	}
+	
+	div.oTitle { 
+		font-weight: bold;
+		font-size: 30px;
+		height: 30px;
+		width: 100px;
+	}
+	
+	.row:after {
+	  content: "";
+	  display: table;
+	  clear: both;
+	}
+	.column-1, .column-2 {
+	  float: left;
+	  position: relative;
+	}
+	.column-1 {
+	  width: 100px;
+	  margin-top:10px;
+	}
+	.column-2 {
+		width: 80%;
+		margin-top: 10px;
+	}
+	
+	.editMeta {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 100px;
+	  width: 100%;
+	}
+	
+	.editorContainer {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 400px;
+	  width: 100%;
+	}
+</style>
+<script>
+	$(document).ready(function () { 
+//**** setup control to navigat through node.seq		
+	    var nodeSeq = 215,
+	    	nodeVer = 0;
+	    loadData(nodeSeq, nodeVer);
+	    $('#seqNum').val(nodeSeq);
+	//});
+	    $('#next').on('click', function () {
+	        //console.log(i + "next");
+	        nodeSeq += 5;
+	        $('#seqNum').val(nodeSeq);
+	        loadData(nodeSeq, nodeVer);
+	    });
+	    $('#prev').on('click', function () {
+	        //console.log("prev" + i);
+	        nodeSeq -= 5;
+	        $('#seqNum').val(nodeSeq);
+	        loadData(nodeSeq, nodeVer);
+	    });
+	
+	    $('#seqNum').on('change', function () {
+	        nodeSeq = parseInt($('#seqNum').val());
+	        //console.log(i);
+	        loadData(nodeSeq, nodeVer);
+	    });
+	});	    
+//****************************
+
+//** functions load up page contents ***
+	{
+		function setupSrcFn(){
+			nname=jsonData[0]["name"];
+			note=jsonData[0]["val"];
+			meta=jsonData[0]["meta"];
+			template=jsonData[0]["template"];   
+			$('#srcName').val(nname);
+			$("#srcMeta").text(meta); 
+			srcText.clipboard.dangerouslyPasteHTML(note, "api");
+			//setSelectedIndex(document.getElementById("srcTempList"),template);
+		}
+		
+		function setupSrcFnX(){
+	       	$("#TempList").show();
+	       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
+		}
+		
+		function loadData(id, ver){
+			setTextFields("/zyzySvc/reader/note/getByID/"+id+"/"+ver, setupSrcFn, setupSrcFnX);
+
+			setupOptionField("nodeverList","/zyzySvc/reader/note/getVer/"+id,"ver");
+		}
+	}
+//*****************************
+
+//** used when creating a related infoBot ***
+	function toCreateRelated() {
+	    console.log("to create realted of: " + sel);
+	    var value1=$('#srcName').val();
+	    var queryString = "?namem=" + value1 + "&names=" + sel;
+	    //window.location.href = "test_rcvr.html" + queryString;
+	    //window.open("test_rcvr.html" + queryString, sel, "location=yes,,height=570,width=520,scrollbars=yes,status=yes");
+	    window.open("note_quill_x.html" + queryString, sel, "location=yes,,height=570,width=520,scrollbars=yes,status=yes");
+	}
+	
+	/*
+	function setSelectedIndex(s, v) {
+	    for ( var i = 0; i < s.options.length; i++ ) {
+	        if ( s.options[i].text == v ) {
+	            s.options[i].selected = true;
+	            return;
+	        }
+	    }
+	}
+	*/
+	
+	var sel;
+</script>
+
+</head>
+
+<body>
+	<div id="btns">
+	<a id="prev" href="#" >&laquo; Previous</a>
+	<input id="seqNum" size=3>
+	<a id="next" href="#" >Next &raquo;</a>
+	</div>		
+	<script>
+		//Helper function to serialize all the form fields into a JSON string
+		function composeData() {
+			var strRslt, rsltObj;
+			rsltObj = {
+				src: {
+					template:$('#srcTempList option:selected').val() ,
+					name:	$('#srcName').val(),
+					meta:	$('#srcMeta').text(),
+					seq:	$('#seqNum').val(),
+					//note: 	$('#srcNote').html()
+					//note: 	editor.root.innerHTML,
+					note: 	srcText.root.innerHTML,
+				}	
+			};
+			
+			//alert(typeof rsltObj );
+			let json= JSON.stringify(rsltObj)
+	
+			//return strRslt;
+			return json;
+		}
+	</script>
+	<form id="noteFrm" enctype='text/plain' action="#"
+		onsubmit="saveNode(composeData);return false">
+	
+		<div id="srcRowName" class="row" >    <!-- row 1 -->
+		  <div class="column-1">Name:</div> 
+		  <div class="column-2">
+			<input type="text" size="40" style="float:left; margin-left:0px" id="srcName" name="srcName" >
+		  <div style="float:left">ver#: </div>
+		  <div style="float:left"> 
+		   <select id="nodeverList" name="nodeVerList"  
+		  	   onchange='setTextFields("/zyzySvc/reader/template/get/"+this.options[this.selectedIndex].text, setupTpltFn, null)'>
+			</select>
+		  </div>
+		  </div>
+		</div>
+	
+		<div id="srcRowMeta" class="row">    <!-- row 2 -->   
+		  <div class="column-1">Meta:
+		  </div> 
+		  <div class="column-2">
+		    <div id="srcMeta" class="editMeta" contenteditable="true">
+		    </div>  
+		  </div>
+		</div>
+			
+		<div id="srcRowNote" class="row">    <!-- row 3 -->
+			<div class="column-1">Notes:</div>
+			<div class="column-2">
+				<div id="srcToolbar">
+				  <span class="ql-formats">
+				  <select class="ql-size">     <!-- size -->
+				     <option value="10px">Small</option>
+				     <option selected>Normal</option>
+				     <option value="18px">Large</option>
+				     <option value="32px">Huge</option>
+				  </select>
+	
+				  <select class="ql-color">   <!-- color -->
+				      <option selected></option>
+				      <option value="red"></option>
+				      <option value="orange"></option>
+				      <option value="yellow"></option>
+				      <option value="green"></option>
+				      <option value="blue"></option>
+				      <option value="purple"></option>
+				  </select>
+				  <button class="ql-button" value="title1">H1</button>   <!-- the format will be class "sec-title" -->
+				  <button class="ql-button" value="title2">H2</button>   <!-- the format will be class "sec-title" -->
+				  <button class="ql-button" value="title3">H3</button>   <!-- the format will be class "sec-title" -->
+				  <button class="ql-button" value="text">T</button>    <!-- the format will be class "sec-text" -->
+				  <!-- alignments -->
+				  <button class="ql-align" value=""></button>
+				  <button class="ql-align" value="center"></button>
+				  <button class="ql-align" value="right"></button>
+				  <button class="ql-align" value="justify"></button>
+				  
+				  <button class="cust-clear" title="Clear Formatting">X</button>
+				  <button class="ql-button" value="link" onclick="toCreateRelated()">R</button>
+				  </span>
+				</div>
+				<div id="srcNote" class="editorContainer"></div>
+				<!--  button onclick="logHtmlContent(src)">Log content as HTML</button  -->
+			</div>
+		</div>			
+	
+		<div id="rowAct" class="row">   <!-- row 4 -->
+			<div class="column-1">
+			</div>
+			<div class="column-2">
+			<input type="submit" value="save Note">
+			</div>
+		</div>		
+	</form>
+</body>
+
+<script>
+	var BackgroundClass = Quill.import('attributors/class/background');
+	var ColorClass = Quill.import('attributors/class/color');
+	var SizeStyle = Quill.import('attributors/style/size');
+	Quill.register(BackgroundClass, true);
+	Quill.register(ColorClass, true);
+	Quill.register(SizeStyle, true);
+
+  const Parchment = Quill.import('parchment')
+  var boxAttributor = new Parchment.Attributor.Class('button', 'sec', {
+    scope: Parchment.Scope.INLINE,
+    whitelist: ['text', 'title1','title2','title3', 'link'],
+
+  });
+  Quill.register(boxAttributor);
+
+  var srcText = new Quill('#srcNote', {
+	modules: {
+	  toolbar: {
+		container: '#srcToolbar'
+	  }
+	},
+	placeholder: 'Compose an epic...',
+	  theme: 'snow'  // or 'bubble', or 'snow'
+	});
+
+  srcText.on('selection-change', function(range, oldRange, source) {
+	  if (range) {
+	    if (range.length == 0) {
+	    	sel="";
+	      console.log('User cursor is on', range.index);
+	    } else {
+	      var text = srcText.getText(range.index, range.length);
+	      sel=text;
+	      console.log('User has highlighted', text);
+	      //let's popup a custom menu, by clicking on a button in the bar?
+	    }
+	  } else {
+	    console.log('Cursor not in the editor');
+	  }
+	});
+
+  $("button").click(function(event){
+      event.preventDefault();
+  });
+  
+  function logHtmlContent(el) {
+    console.log(el.root.innerHTML);
+  }
+
+  $('.cust-clear').click(function(ev) {
+	    var range = srcText.getSelection();
+	    srcText.removeFormat(range.index, range.length);
+	  });
+</script>
+
+</html>

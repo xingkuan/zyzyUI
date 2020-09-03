@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="../elasticsearch-js/elasticsearch.js"></script>
+        <script src="../d3JS/d3.min.js"></script>
+        <script src="esTable.js"></script>
+	    <style>
+		    body {
+		        font: 12px sans-serif;
+		    }
+	
+		    table td, table td * {
+		      border: 1px solid black;
+		      vertical-align: top;
+		      text-align: left;
+		    }
+    	</style>
+	    <title>Test</title>
+    </head>
+    <body>
+    	<div id="selSymp" style="display: flex; flex-direction: row;">
+	       <select id="sympton" onchange="updateSymptonSelection()">
+	         <option value="瘀血">瘀血</option>
+	         <option value="阴痿">阴痿</option>
+	         <option value="口舌疮烂">口舌疮烂</option>
+	         <option value="明目益气">明目益气</option>
+	         <option value="香港脚">香港脚</option>
+	         <option value="惊痫温疟">惊痫温疟</option>
+	         <option value="汤火伤灼">汤火伤灼</option>
+	         <option value="脾胃虚弱">脾胃虚弱</option>
+	         <option value="生津液">生津液</option>
+	         <option value="牙痛">牙痛</option>
+	         <option value="脱肛">脱肛</option>
+	         <option value="癣疮">癣疮</option>
+	       </select>
+    	</div>
+	    <div id="main" style="display: flex; flex-direction: row;">
+	      <table id="split">
+	        <thead></thead>
+	        <tbody></tbody>
+	      </table>
+	    </div>
+    </body>
+	<script>
+	  function updateSymptonSelection(){
+	    var filter = document.getElementById('sympton').value;
+	    //alert(filter); 
+	    esSearch(filter);
+	  }
+	</script>
+</html>
+
