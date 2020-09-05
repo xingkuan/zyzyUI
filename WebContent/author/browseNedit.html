@@ -99,7 +99,7 @@
 	  box-sizing: border-box;
 	  display: inline-block;
 	  float: left;
-	  height: 100px;
+	  height: 50px;
 	  width: 100%;
 	}
 	
@@ -117,26 +117,26 @@
 //**** setup control to navigat through node.seq		
 	    var nodeSeq = 215,
 	    	nodeVer = 0;
-	    loadData(nodeSeq, nodeVer);
+	    loadData(nodeSeq, nodeVer, false);
 	    $('#seqNum').val(nodeSeq);
 	//});
 	    $('#next').on('click', function () {
 	        //console.log(i + "next");
 	        nodeSeq += 5;
 	        $('#seqNum').val(nodeSeq);
-	        loadData(nodeSeq, nodeVer);
+	        loadData(nodeSeq, nodeVer, false);
 	    });
 	    $('#prev').on('click', function () {
 	        //console.log("prev" + i);
 	        nodeSeq -= 5;
 	        $('#seqNum').val(nodeSeq);
-	        loadData(nodeSeq, nodeVer);
+	        loadData(nodeSeq, nodeVer, false);
 	    });
 	
 	    $('#seqNum').on('change', function () {
 	        nodeSeq = parseInt($('#seqNum').val());
 	        //console.log(i);
-	        loadData(nodeSeq, nodeVer);
+	        loadData(nodeSeq, nodeVer, false);
 	    });
 	});	    
 //****************************
@@ -159,10 +159,10 @@
 	       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
 		}
 		
-		function loadData(id, ver){
+		function loadData(id, ver, changeVer){
 			setTextFields("/zyzySvc/reader/note/getByID/"+id+"/"+ver, setupSrcFn, setupSrcFnX);
-
-			setupOptionField("nodeverList","/zyzySvc/reader/note/getVer/"+id,"ver");
+			if(!changeVer)
+				setupOptionField("nodeverList","/zyzySvc/reader/note/getVer/"+id,"ver");
 		}
 	}
 //*****************************
@@ -232,7 +232,7 @@
 		  <div style="float:left">ver#: </div>
 		  <div style="float:left"> 
 		   <select id="nodeverList" name="nodeVerList"  
-		  	   onchange='setTextFields("/zyzySvc/reader/template/get/"+this.options[this.selectedIndex].text, setupTpltFn, null)'>
+		  	   onchange='loadData($("#seqNum").val(), this.options[this.selectedIndex].text, true)'>
 			</select>
 		  </div>
 		  </div>
@@ -305,52 +305,54 @@
 	Quill.register(ColorClass, true);
 	Quill.register(SizeStyle, true);
 
-  const Parchment = Quill.import('parchment')
-  var boxAttributor = new Parchment.Attributor.Class('button', 'sec', {
-    scope: Parchment.Scope.INLINE,
-    whitelist: ['text', 'title1','title2','title3', 'link'],
-
-  });
-  Quill.register(boxAttributor);
-
-  var srcText = new Quill('#srcNote', {
-	modules: {
-	  toolbar: {
-		container: '#srcToolbar'
-	  }
-	},
-	placeholder: 'Compose an epic...',
-	  theme: 'snow'  // or 'bubble', or 'snow'
+	const Parchment = Quill.import('parchment')
+	var boxAttributor = new Parchment.Attributor.Class('button', 'sec', {
+		scope: Parchment.Scope.INLINE,
+		whitelist: ['text', 'title1','title2','title3', 'link'],
 	});
 
-  srcText.on('selection-change', function(range, oldRange, source) {
+	Quill.register(boxAttributor);
+
+	var srcText = new Quill('#srcNote', {
+		modules: {
+		  toolbar: {
+			container: '#srcToolbar'
+		  }
+		},
+		placeholder: 'Compose an epic...',
+		  theme: 'snow'  // or 'bubble', or 'snow'
+	});
+
+	srcText.on('selection-change', function(range, oldRange, source) {
 	  if (range) {
 	    if (range.length == 0) {
 	    	sel="";
-	      console.log('User cursor is on', range.index);
+	    //  console.log('User cursor is on', range.index);
 	    } else {
 	      var text = srcText.getText(range.index, range.length);
 	      sel=text;
-	      console.log('User has highlighted', text);
+	    //  console.log('User has highlighted', text);
 	      //let's popup a custom menu, by clicking on a button in the bar?
 	    }
 	  } else {
-	    console.log('Cursor not in the editor');
+	  //  console.log('Cursor not in the editor');
 	  }
 	});
 
-  $("button").click(function(event){
-      event.preventDefault();
-  });
+	$("button").click(function(event){
+		event.preventDefault();
+	});
   
-  function logHtmlContent(el) {
-    console.log(el.root.innerHTML);
-  }
+	function logHtmlContent(el) {
+		console.log(el.root.innerHTML);
+	}
 
-  $('.cust-clear').click(function(ev) {
-	    var range = srcText.getSelection();
-	    srcText.removeFormat(range.index, range.length);
-	  });
+	$('.cust-clear').click(function(ev) {
+		//2020.09.04: maybe a bug; but found this work around when debug into the code..
+		//var range = srcText.getSelection();
+		var range = srcText.selection.savedRange;
+		srcText.removeFormat(range.index, range.length);
+	});
 </script>
 
 </html>

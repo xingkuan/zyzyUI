@@ -16,6 +16,7 @@ function setupOptionField(elementID, srcUrl, srcDataFldName) {
 			//let id = "#" + "srcTempList";
 			let id = "#" + elementID;
 			let tempList = $(id);
+			tempList.empty();
 			$.each(data, function(i) {
 				tempList.append(
 					'<option value="' + data[i][srcDataFldName] + '">' + data[i][srcDataFldName] + '</option>'
