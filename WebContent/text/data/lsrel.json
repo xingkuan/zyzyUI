@@ -1,4 +1,4 @@
-[
+{"links":[
 {"relnum": "1", "source":"木", "target":"火", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
 {"relnum": "2", "source":"火", "target":"土", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
 {"relnum": "3", "source":"土", "target":"金", "relationship":"相生", "tgt_desc":"xx", "dist": 130, "charge": -100, "line_type":"A"},
@@ -37,3 +37,4 @@
 {"relnum": "31", "source":"心包", "target":"戌时", "relationship":"旺时", "tgt_desc":"xxx", "dist": 50,"charge": -500, "line_type":"L"},
 {"relnum": "32", "source":"三焦", "target":"亥时", "relationship":"旺时", "tgt_desc":"xxx", "dist": 50,"charge": -500, "line_type":"L"}
 ]
+}

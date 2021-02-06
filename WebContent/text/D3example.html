@@ -6,111 +6,232 @@
 <script type="text/javascript" src="../d3JS/d3.min.js"></script>
 <style>
  
-path.link {
+line {
   fill: none;
   stroke: #666;
+  opacity: 1;
   stroke-width: 1.5px;
 }
  
 circle {
+  r:20;
   fill: #ccc;
   stroke: #fff;
   stroke-width: 1.5px;
+  fill: green
 }
  
 text {
-  fill: #000;
-  font: 10px sans-serif;
+  fill: #0f0;
+  font: 8px sans-serif;
   pointer-events: none;
 }
- 
 </style>
 </head>
  
-    <BODY>
+<BODY>
+<svg id='viz'></svg>
+
 <script type="text/javascript">
-//d3.csv("data/lsrel.csv", function(error, links) {
-d3.json("data/lsrel.json").then(function(error, links) {
-//?? "links" have an epmty line, which generate an extra node.
-//?? how can you remove it?
-var nodes = {};
-var rel = {};
- 
-console.log(links);
-// Compute the distinct nodes from the links.
-links.forEach(function(link) {
-//for (var i=0, len = links.length; i < len; i++) {
-//link = links[i];
-console.log(link.relnum);
-   link.id = "rel" + link.relnum; 
-   // link.relnum = link.relnum;
-   var sLinkSrc = link.source;
-   var sLinkTgt = link.target;
-   link.source = nodes[link.source] || 
-        (nodes[link.source] = {name: link.source, relcnt: 0, srccnt: 0, tgtcnt: 0});
-   link.target = nodes[link.target] || 
-        (nodes[link.target] = {name: link.target, relcnt: 0, srccnt: 0, tgtcnt: 0});
-   link.relationship = link.relationship;
-    
-   if (nodes[sLinkSrc])
-   {
-         nodes[sLinkSrc]["relcnt"] = nodes[sLinkSrc]["relcnt"]+1;
-         nodes[sLinkSrc]["srccnt"] = nodes[sLinkSrc]["srccnt"]+1;
-   }
- 
-   if (nodes[sLinkTgt])
-   {
-         nodes[sLinkTgt]["relcnt"] = nodes[sLinkTgt]["relcnt"]+1;
-         nodes[sLinkTgt]["tgtcnt"] = nodes[sLinkTgt]["tgtcnt"]+1;
-   }
- 
-   // console.log(JSON.stringify(nodes));
-   // console.log("NODEPROP: " + nodes[sLinkSrc].name);
-//};
-});
- 
-var width = screen.width-80,
-    height = screen.height-80;
-//.. "d3Relation" is defined in the index3.html, which contains this HTML
-//var width = parent().width(),
-//    height = parent().height();
- 
+var width = window.innerHeight,
+	height = window.innerWidth;
+
+
 console.log("Width: " + width);
 console.log("Height: " + height);
- 
-var force = d3.layout.force()
-    .nodes(d3.values(nodes))
-    .links(links)
-    .size([width, height])
-    //.linkDistance(200)
-.gravity(0.05)
-.charge(function(d) {return d.charge;})
-.linkDistance(function(d) { return  d.dist; })
-    .charge(-800)
-    .on("tick", tick)
-    .start();
- 
-var drag = force.drag()
-            .on("dragstart", dragstart);
- 
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height);
- 
-// build the arrow.
-svg.append("svg:defs").selectAll("marker")
-    .data(["end"])
-  .enter().append("svg:marker")
-    .attr("id", String)
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 22)
-    .attr("refY", -1)
-    .attr("markerWidth", 8)
-    .attr("markerHeight", 8)
-    .attr("orient", "auto")
-  .append("svg:path")
-    .attr("d", "M0,-5L10,0L0,5");
- 
+//svg objects
+//var links=[], nodes=[];
+var svgNodes, svgLinks;
+//the data - an object with nodes and links
+var graph;
+
+var svg = d3.select("#viz")
+		.attr("width", width)
+		.attr("height", height);
+
+svg.call(d3.zoom()
+	.extent([[0, 0], [width, height]])
+	.scaleExtent([0.1, 40])
+	.on("zoom", zoomed));
+
+function zoomed({transform}) {
+	svg.attr("transform", transform);
+}
+	  
+svg.call(d3.drag()
+	.on('start', dragStarted)
+    .on('drag', dragged)
+    .on('end', dragEnded)
+//    .on('start.render drag.render end.render', render)
+		);
+////////////UI EVENTS ////////////
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = event.x;   //set node fix pos to mouse position 
+  d.fy = event.y;   //, that is, no force can act on it.
+}
+function dragged(event, d) {
+  d.fx = event.x;    
+  d.fy = event.y;
+}
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0.0001);
+  d.fx = null;  //let force to act on it
+  d.fy = null;
+}		
+
+//https://bost.ocks.org/mike/join/
+//https://bl.ocks.org/jodyphelan/5dc989637045a0f48418101423378fbd
+//https://bl.ocks.org/steveharoz/8c3e2524079a8c440df60c1ab72b5d03
+//https://bl.ocks.org/micahstubbs/f4dcb0f587e54ea80a67b3efa773b995  For dragging
+//d3.csv("data/lsrel.csv", function(error, links) {
+d3.json("data/lsrel.json").then(function(_data, error) {
+	let tempNodes=[];
+
+	if (error) throw error; 
+	console.log("HERE");
+	//console.log(_links);
+
+	// Compute the distinct nodes from the links.
+	_links=_data.links;
+	_links.forEach(function(link, i) {
+		//console.log(link.relnum);
+		link.id = "rel" + link.relnum; 
+		// link.relnum = link.relnum;
+		var sLinkSrc = link.source;
+		var sLinkTgt = link.target;
+		link.source = tempNodes[link.source] || 
+		    (tempNodes[link.source] = {name: link.source, relcnt: 0, srccnt: 0, tgtcnt: 0});
+		link.target = tempNodes[link.target] || 
+		    (tempNodes[link.target] = {name: link.target, relcnt: 0, srccnt: 0, tgtcnt: 0});
+		link.relationship = link.relationship;
+		if (tempNodes[sLinkSrc]){
+			tempNodes[sLinkSrc]["relcnt"] = tempNodes[sLinkSrc]["relcnt"]+1;
+			tempNodes[sLinkSrc]["srccnt"] = tempNodes[sLinkSrc]["srccnt"]+1;
+		}
+		if (tempNodes[sLinkTgt]){
+			tempNodes[sLinkTgt]["relcnt"] = tempNodes[sLinkTgt]["relcnt"]+1;
+			tempNodes[sLinkTgt]["tgtcnt"] = tempNodes[sLinkTgt]["tgtcnt"]+1;
+		}
+		// console.log(JSON.stringify(nodes));
+	})
+	graph={"nodes": Object.values(tempNodes),   //convert dictionary to array
+			"links": _links
+		}
+	initializeDisplay();
+	initializeSimulation();
+});
+
+//force properties
+var forceProperties = {
+	    center: {
+	        x: 0.5,
+	        y: 0.5
+	    },
+	    charge: {
+	        enabled: true,
+	        strength: -100,
+	        distanceMin: 1,
+	        distanceMax: 2000
+	    },
+	    collide: {
+	        enabled: true,
+	        strength: .7,
+	        iterations: 1,
+	        radius: 1     //?
+	    },
+	    forceX: {
+	        enabled: true,
+	        strength: .1,
+	        x: .5
+	    },
+	    forceY: {
+	        enabled: true,
+	        strength: .1,
+	        y: .5
+	    },
+	    link: {
+	        enabled: true,
+	        distance: 60,
+	        iterations: 1
+	    }
+	}
+
+////////////FORCE SIMULATION //////////// 
+var simulation = d3.forceSimulation();
+
+function initializeSimulation() {
+	simulation
+		.nodes(graph.nodes);     
+ 	initializeForces();
+ 	simulation.on("tick", ticked);
+}
+
+// add forces to the simulation
+function initializeForces() {
+	// add forces and associate each with a name
+	simulation
+		.force("link", d3.forceLink())    //graph.links  ??
+		.force("charge", d3.forceManyBody())
+		.force("collide", d3.forceCollide())
+		.force("center", d3.forceCenter())
+		.force("forceX", d3.forceX())   //without it, updateForce() can't work!
+		.force("forceY", d3.forceY())
+		;
+	// apply properties to each of the forces
+	updateForces();
+}
+
+// apply new force properties
+function updateForces() {
+	// get each force by name and update the properties
+	simulation.force("center")
+		.x(width * forceProperties.center.x)
+		.y(height * forceProperties.center.y);
+	simulation.force("charge")
+		.strength(forceProperties.charge.strength * forceProperties.charge.enabled)
+		.distanceMin(forceProperties.charge.distanceMin)
+		.distanceMax(forceProperties.charge.distanceMax);
+	simulation.force("collide")
+		.strength(forceProperties.collide.strength * forceProperties.collide.enabled)
+		.radius(forceProperties.collide.radius)
+		.iterations(forceProperties.collide.iterations);
+	simulation.force("forceX")
+		.strength(forceProperties.forceX.strength * forceProperties.forceX.enabled)
+		.x(width * forceProperties.forceX.x);
+	simulation.force("forceY")
+		.strength(forceProperties.forceY.strength * forceProperties.forceY.enabled)
+		.y(height * forceProperties.forceY.y);
+	simulation.force("link")
+		.id(function(d) {return d.id;})
+		.distance(forceProperties.link.distance)
+		.iterations(forceProperties.link.iterations)
+		.links(forceProperties.link.enabled ? graph.links : []);
+
+	// updates ignored until this is run
+	// restarts the simulation (important if simulation has already slowed down)
+	simulation.alpha(1).restart();
+}
+
+
+//generate the svg objects and force simulation
+function initializeDisplay() {
+	// build the arrow.
+	svg.append("svg:defs")
+		.selectAll("marker")
+		.data(["end"])
+		.enter().append("svg:marker")
+		.attr("id", String)
+		.attr("viewBox", "0 -5 10 10")
+		.attr("refX", 22)
+		.attr("refY", -1)
+		.attr("markerWidth", 8)
+		.attr("markerHeight", 8)
+		.attr("orient", "auto")
+		.append("svg:path")
+		.attr("d", "M0,-5L10,0L0,5");
+
+/*
 // add the links and the arrows
 var path = svg.append("svg:g").selectAll("path")
     .data(force.links())
@@ -130,50 +251,90 @@ var mytext = svg.append("svg:g").selectAll("text")
  .attr("xlink:href", function(d) { return "#" + d.id; })
  .attr("style", "fill:magenta; font-weight:bold; font-size:12")
  .text(function(d) { return d.relationship; } );
+*/ 
+	nodeContainer = svg.append("g")    //containter for nodes
+				.attr("class", "nodes");
+				
+	//create circles to represent nodes
+	svgNodes = nodeContainer
+		.selectAll("circle")      //create a circle for each node 
+		.data(graph.nodes)
+		.enter()
+		.append("g")
+		;
+	svgNodes.append("circle")     //append, join, insert, remove ...
+	//.attr("transform", d => `translate(${d})`)   //??
+    	.call(d3.drag()			//for drag individual node
+				.on("start", dragStarted)
+                .on("drag", dragged)
+                .on("end", dragEnded))
+		.on("click", function(event, d){esSearch(d.name);})
+	;
+	// node tooltip
+	/*each node is something like:
+	    <g transform="translate(80,80)">   ... "transform" affects all the children
+	        <circle r="40" stroke="black" fill="white"></circle>
+	        <text dx="-20">Node 1</text>
+	    </g>
+	*/
+	svgNodes.append("text")
+		.attr("text-anchor", "middle")
+		// .attr("style", "font-weight:bold; font-size:12")
+		.attr("style", function(d) {
+			if (d.relcnt >= 3){
+				return "font-size:10; fill:red"
+			}else{
+				return "font-weight:bold; font-size:10"
+			}
+		})
+		.attr("style", "fill:blue; font-weight:bold; font-size:16")
+		.text(function(d) { return d.name; })
+	;
+
+	// set the data and properties of link lines
+	svgLinks = svg.append("g")
+		.attr("class", "links")
+		.selectAll("line")
+		.data(graph.links)
+		.enter()
+		.append("line")
+	;
+
+	// visualize the graph
+	updateDisplay();		
+}
  
-// define the nodes
-var node = svg.selectAll(".node")
-    .data(force.nodes())
-  .enter().append("g")
-    .attr("class", "node")
-    .call(force.drag);
- 
-// add the nodes
-node.append("circle")
-    .attr("r", 12)
-    .attr("fill", "grey")
-   //.on("click", function(d){alert(d.name);})
-   .on("click", function(d){esSearch(d.name);})
-   .append("svg:title")
-   .text(function(d) { return "Source: " + d.srccnt + " ~ Target: " + d.tgtcnt; });
- 
-// add the text
-/*node.append("text")
-    .attr("x", 12)
-    .attr("dy", ".35em")
-    .attr("style", "fill:blue; font-weight:bold; font-size:16")
-    .text(function(d) { return d.name; });
+function updateDisplay() {
+//probably more for fancy simulation.
+/*	svgNodes
+		.attr("r", forceProperties.collide.radius)
+		.attr("stroke", forceProperties.charge.strength > 0 ? "blue" : "red")
+		.attr("stroke-width", forceProperties.charge.enabled==false ? 0 : Math.abs(forceProperties.charge.strength)/15);
+
+	svgLinks.attr("stroke-width", forceProperties.link.enabled ? 1 : .5)
+		.attr("opacity", forceProperties.link.enabled ? 1 : 0);
 */
+}
+
  
-node.append("text")
-   .attr("text-anchor", "middle")
-    // .attr("style", "font-weight:bold; font-size:12")
-    .attr("style", function(d) {
-      if (d.relcnt >= 3)
-      {
-         return "font-weight:bold; font-size:12; fill:red"
-      }
-      else
-      {
-         return "font-weight:bold; font-size:12"
-      }
-   })
-   //.text(function(d) { return d.relcnt; });
-    .attr("style", "fill:blue; font-weight:bold; font-size:16")
-    .text(function(d) { return d.name; });
- 
+//update the display positions after each simulation tick
+function ticked() {
+    svgLinks
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+	svgNodes
+        .attr("transform", function(d) {
+            return "translate(" + d.x + "," + d.y + ")"; 
+		});        
+	
+    d3.select('#alpha_value')
+    	.style('flex-basis', (simulation.alpha()*100) + '%');
+} 
 // add the curvy lines
-function tick() {
+/*function ticked() {
     path.attr("d", function(d) {
         if (d.line_type == "L"){
            return "M" +
@@ -198,26 +359,30 @@ function tick() {
     node
          .attr("transform", function(d) {
              return "translate(" + d.x + "," + d.y + ")"; });
-}
- 
-function dragstart(d)
-{
-   d3.select(this).classed("fixed", d.fixed = true);
-}
-if (error)
-{
-   console.log(error);
-}
-else
-{
-   console.log(nodes);
-   console.log(links);
-   console.log(path);
-   console.log(rel);
-}
+}  
+
+*/
+
+
+
+// update size-related forces
+d3.select(window).on("resize", function(){
+    //width = +svg.node().getBoundingClientRect().width;
+    //height = +svg.node().getBoundingClientRect().height;
+    width = window.innerHeight,
+	height = window.innerWidth;
+    
+    console.log("width:", width );
+    console.log("heidht:", height );
+    updateForces();
 });
- 
+
+
+function esSearch(term){
+	console.log(term);
+}
 </script>
+
  
-    </BODY>
+</BODY>
 </HTML>   

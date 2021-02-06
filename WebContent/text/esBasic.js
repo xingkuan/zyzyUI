@@ -6,7 +6,6 @@ var client = new elasticsearch.Client({
 function esJiaoCaiSearch(htmlEl, qryStr) {
 	client.search({
 	  index: 'jiaocai',
-	  type: 'v1',
 	  size: 10,
 	  /*body: {
 	    //stored_field: ["tags"],
@@ -64,7 +63,6 @@ function esJiaoCaiSearch(htmlEl, qryStr) {
 function esJiaoCaiSearchTags(htmlEl, qryStr) {
 client.search({
   index: 'jiaocai',
-  type: 'v1',
   size: 10,
   body: {
     //stored_field: ["tags"],

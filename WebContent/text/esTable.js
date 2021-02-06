@@ -31,16 +31,22 @@ var client = new elasticsearch.Client({
 
 function esSearch(qryStr) {
 	client.search({
-	  index: 'bencaojb',
-	  type: 'v1',
+	  index: 'infobot',
 	  /*body: {
 	    query: {
 	      match: {
-	        'claims.content': '精神'
+	        'content': '精神'
 	      }
 	    }
 	  }*/
-	  q: qryStr
+	  //q: qryStr
+	  body: {
+      	query: {
+        	match: {
+          content: qryStr
+        }
+      }
+    }
 	}).then(function (resp) {
 	    //console.log(resp);
 	    let hits = resp.hits.hits;
