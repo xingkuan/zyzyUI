@@ -2,9 +2,9 @@
 <meta charset="utf-8">
 <head>
 <title>Force layout (with links)</title>
-<script src="js/jquery-3.3.1.min.js"></script>
-<script src="js2018/ds3_5.7/d3.min.js"></script>
-<script src="js2018/neo4j/neo4j-web.js"></script>
+<script src="jquery/jquery-3.3.1.min.js"></script>
+<script src="d3JS/d3.min.js"></script>
+<script src="neo4j/neo4j-web.js"></script>
 </head>
 
 <style>
@@ -136,7 +136,8 @@ function run() {
 	  headers: {"Authorization":"Basic " + auth},
 	  //Authorization: 'Basic '+auth,
 	  contentType:"application/json; charset=utf-8",
-	  url: "http://localhost:7474/db/data/transaction/commit",
+	  //?url: "http://localhost:7474/zhongyi/data/transaction/commit",
+	  url: "http://localhost:7474/zhongyi",
 	  data: JSON.stringify(post_request),
 	  success: function(data, textStatus, jqXHR){
 	    console.log(data);

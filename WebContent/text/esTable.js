@@ -83,3 +83,80 @@ function esSearch(qryStr) {
 	});
 
 }
+
+
+
+function zyzyESsearch(qryStr) {
+d3.json("http://localhost:8080/zyzySvc/es/esSearchHi/"+qryStr).then(function (resp) {
+	    //console.log(resp);
+	    let hits = resp.hits.hits;
+	
+		// create rows
+		let tr = d3.select('#main')
+		.selectAll("p")
+		    .data(hits)
+		    .enter()
+		    .append("p") 
+		    //.text(function(d) {
+		    .html(function(d) {
+		    	let stgSrcId=d['_source']['stg_src_id'];
+		    	let stgSrcSeq=d['_source']['stg_src_seq'];
+		    	let ver=0;
+		    	let id=d['_id'];
+		    	let srcName=d['_source']['name'];
+		    	console.log(id);
+		    	let p = stgSrcId +", " + stgSrcSeq + ", " + id;
+		    	p='<a href="esDocByID.html?id='+id+'">' + id +'</a><br>';
+		    	p=p + "; " + '<a href="docSrcs.html?srcTitle='+srcName+'">' + srcName+'</a><br>';
+		    	p=p + '; ' + '<a href="stgSrcVW.html?sid='+stgSrcId+'&sseq='+stgSrcSeq+'&ver='+ver+'">' + stgSrcSeq+'</a><br>';
+		    	for (i of d['highlight']['content']){
+		    		p = p + i + '<br>';
+		    	}
+//	    	return unescape(JSON.stringify(d['highlight']['content']))  //unescape <, >
+				return p;
+		    })   
+		    ;
+	}, function (err) {
+	    console.trace(err.message);
+	});
+}
+function zyzyESdocByID(id) {
+	d3.json("http://localhost:8080/zyzySvc/es/esDocByID/"+id)
+	.then(function (resp) {
+	    let hits = resp.hits.hits;
+		// create rows
+	   	console.log(resp);
+		let tr = d3.select('#main')
+			.selectAll("p")
+	    	.data(hits)
+	    	.enter()
+	    	.append("p") 
+	    	//.text(function(d) {
+	    	.html(function(d) {
+			 	return id + '<br>'
+			 		+ d['_source']['content'];
+	   	});
+	},function (err) {
+	   	console.trace(err.message);
+	});
+}
+function zyzyESdocsByTitle(titleName) {
+	d3.json("http://localhost:8080/zyzySvc/es/esSrcsByTitle/"+titleName)
+	.then(function (resp) {
+	    let hits = resp.hits.hits;
+   		let rslt = titleName +'<br>';
+   		for (const i of hits){ 
+			rslt = rslt + i['_source']['content'] + '<br>';
+		}	    		
+
+		d3.select('#main')
+//			.selectAll("p")
+//	    	.data(hits)
+//	    	.enter()
+//	    	.append("p") 
+	    	//.text(function(d) {
+	    	.html(rslt);
+	},function (err) {
+	   	console.trace(err.message);
+	});
+}

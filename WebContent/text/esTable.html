@@ -18,12 +18,20 @@
 		      vertical-align: top;
 		      text-align: left;
 		    }
+		    
+		    p {
+		    float:left;
+		    width: 100%;
+    margin: 10px 0;
+    padding: 5px;
+    border: 1px solid #999;
+}
     	</style>
 	    <title>Test</title>
     </head>
     <body>
     	<div id="selSymp" style="display: flex; flex-direction: row;">
-	       <select id="sympton" onchange="updateSymptonSelection()">
+	       <!--  select id="sympton" onchange="updateSymptonSelection()">
 	         <option value="瘀血">瘀血</option>
 	         <option value="阴痿">阴痿</option>
 	         <option value="口舌疮烂">口舌疮烂</option>
@@ -36,9 +44,14 @@
 	         <option value="牙痛">牙痛</option>
 	         <option value="脱肛">脱肛</option>
 	         <option value="癣疮">癣疮</option>
-	       </select>
+	       </select   -->
+<form action="#" method="get" onsubmit="return updateSymptonSelection()">
+  <label for="fname">search:</label>
+  <input type="text" id="sympton" name="fname"><br><br>
+  <input type="submit" value="Submit">
+</form>
     	</div>
-	    <div id="main" style="display: flex; flex-direction: row;">
+	    <div id="main" >
 	      <table id="split">
 	        <thead></thead>
 	        <tbody></tbody>
@@ -49,7 +62,8 @@
 	  function updateSymptonSelection(){
 	    var filter = document.getElementById('sympton').value;
 	    //alert(filter); 
-	    esSearch(filter);
+	    //esSearch(filter);
+	    zyzyESsearch(filter);
 	  }
 	</script>
 </html>

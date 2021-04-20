@@ -238,7 +238,7 @@
 		
 		function setNoteField(){
 			var x = document.getElementById("srcName").value;
-			setTextFields("/zyzySvc/reader/note/get/"+x, setupSrcFn, setupSrcFnX);
+			setTextFields("/zyzySvc/reader/note/get/"+x+"/0", setupSrcFn, setupSrcFnX);
 		}
 	</script>
 	<input type="text" size="40" style="margin-left:0px" id="srcName" name="srcName" 

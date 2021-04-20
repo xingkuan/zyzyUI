@@ -160,7 +160,7 @@
 			</script>
 			<input type="text" id="src1Name" name="srcName" 
 				placeholder=" ... enter src 1 name" 
-				onchange='setTextFields("/zyzySvc/reader/note/get/"+this.value, setupSrcFn, null)'>
+				onchange='setTextFields("/zyzySvc/reader/note/get/"+this.value+"/0", setupSrcFn, null)'>
 			</input>
 		</div>
 	</div>
@@ -200,7 +200,7 @@
   <!-- onchange='setNoteD("src2Data", this.value)' -->
 	<input type="text" style="margin-left:0px" id="src2Name" name="srcName" 
 		placeholder=" ... enter src 1 name" 
-		onchange='setTextFields("/zyzySvc/reader/note/get/"+this.value, function(){$("#src2Data").html(jsonData[0].val);}, null)'>
+		onchange='setTextFields("/zyzySvc/reader/note/get/"+this.value+"/0", function(){$("#src2Data").html(jsonData[0].val);}, null)'>
 	</input>
   </div>
 </div>
