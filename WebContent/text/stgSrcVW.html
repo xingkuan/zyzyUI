@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
+
+<script src="stgSrc.js"></script>
+<style>
+#btns {
+    padding-left: 5 px;
+	font-size: 12px;
+    }
+
+#noteTitle {
+    padding-left: 5 px;
+    font-weight: bold;
+	font-size: 14px;
+    }
+
+#noteMeta {
+    padding-left: 5 px;
+	font-size: 12px;
+    }
+
+#noteContent {
+    padding-left: 5 px;
+	font-size: 12px;
+    }
+
+.sec-title{
+    font-weight: bold;
+}
+
+</style>
+
+<script>
+/*
+	$(document).ready(function() {
+	    var i = 215;
+	    loadData(i);
+	    $('#seqNum').val(i);
+	//});
+	    $('#next').on('click', function () {
+	        //console.log(i + "next");
+	        i += 5;
+	        $('#seqNum').val(i);
+	        loadData(i);
+	    });
+	    $('#prev').on('click', function () {
+	        //console.log("prev" + i);
+	        i -= 5;
+	        $('#seqNum').val(i);
+	        loadData(i);
+	    });
+	
+	    $('#seqNum').on('change', function () {
+	        i = parseInt($('#seqNum').val());
+	        //console.log(i);
+	        loadData(i);
+	    });
+	});	    
+
+	function loadData(id){
+		setTextFields("/zyzySvc/reader/note/getByID/"+id+"/0",
+    		function(){
+	    		$('#noteMeta').html(jsonData[0]["meta"]);
+				$('#noteTitle').html(jsonData[0]["name"]);
+				$('#noteContent').html(jsonData[0]["val"]);
+			}, 
+			null);
+    }
+*/	
+	function initPage(){
+		var urlParams = new URLSearchParams(window.location.search);
+	    const   keys = urlParams.keys(),
+	    	values = urlParams.values(),
+	    	entries = urlParams.entries();
+	    console.log(entries[0]);
+	    srcId=urlParams.get('sid');
+	    srcSeq=urlParams.get('sseq');
+
+		//read regular expressions from info_src table. could be multiple lines
+		let srcUrl = "/zyzySvc/STG/getSTGRegHTML/"+srcId;
+		var regExs;
+		$.ajax({
+			type: "GET",
+			url: srcUrl,
+			async: false,
+			success: function(data) {
+				if (data != null) {
+					regExs = data[0]['regex_html'];
+				}
+			},
+			error: function(jqXHR, textStatus, errorThrown) {
+				alert('error: ' + textStatus + errorThrown);
+			}
+		});		
+		regExs=regExs.split("\n");
+		for (const reStr of regExs) {
+			console.log(reStr);
+		}
+	    //zyzyStgDocById(srcId, srcSeq, 0);
+	    let ver=0;
+	    srcUrl="/zyzySvc/STG/getByID/"+srcId+"/"+srcSeq+"/"+ver;
+	    setTextFields(srcUrl,
+	    		function(){
+		    		$('#noteMeta').html(JSON.stringify(jsonData[0]["meta"]));
+					$('#noteTitle').html(jsonData[0]["name"]);
+					content = jsonData[0]["content"]
+					for (const reStr of regExs) {
+						console.log(reStr);
+						//var patt, repStr;  // /\n/<br> ==> \n, <br>
+						[, patt, newStr] = reStr.split('/');
+						console.log(patt, newStr);
+						re = new RegExp(patt, 'g');    //'\n', 'g';
+						content = content.replace(re, newStr); //(re, '<br>')
+					}
+					$('#noteContent').html(content);
+		    		//$('#noteMeta').text(JSON.stringify(jsonData[0]["meta"]));
+					//$('#noteTitle').text(jsonData[0]["name"]);
+					//$('#noteContent').text(jsonData[0]["content"]);
+				}, 
+				null);
+
+	}
+	
+</script>
+
+</head>
+
+<body onload="initPage()">
+<!-- 
+<div id="btns">
+<a id="prev" href="#" >&laquo; Previous</a>
+<input id="seqNum" size=3>
+<a id="next" href="#" >Next &raquo;</a>
+</div>		
+ -->
+<div id="noteTitle" >title</div>		
+<div id="noteMeta" >meta</div>		
+<div id="noteContent" >content</div>	
+
+</body>
+
+</html>

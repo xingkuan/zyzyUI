@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
+
+<script src="stgSrc.js"></script>
+
+<script>
+	var srcId, srcSeq;
+	
+	function initPage(){
+		var urlParams = new URLSearchParams(window.location.search);
+	    const   keys = urlParams.keys(),
+	    	values = urlParams.values(),
+	    	entries = urlParams.entries();
+	    console.log(entries[0]);
+	    srcId=urlParams.get('sid');
+	    srcSeq=urlParams.get('sseq');
+/*
+		//read regular expressions from info_src table. could be multiple lines
+		let srcUrl = "/zyzySvc/STG/getSTGRegTEXT/"+srcId;
+		var regExs;
+		$.ajax({
+			type: "GET",
+			url: srcUrl,
+			async: false,
+			success: function(data) {
+				if (data != null) {
+					regExs = data[0]['regex_html'];
+				}
+			},
+			error: function(jqXHR, textStatus, errorThrown) {
+				alert('error: ' + textStatus + errorThrown);
+			}
+		});		
+		regExs=regExs.split("\n");
+		for (const reStr of regExs) {
+			console.log(reStr);
+		}
+*/
+	    let ver=0;
+	    srcUrl="/zyzySvc/STG/getStgContentByID/"+srcId+"/"+srcSeq+"/"+ver;
+	    setTextFields(srcUrl, function(){
+			$('#srcMeta').text(JSON.stringify(jsonData[0]["meta"]));
+			$('#srcName').text(jsonData[0]["name"]);
+			content = jsonData[0]["content"]
+			/*
+			for (const reStr of regExs) {
+				console.log(reStr);
+				//var patt, repStr;  // /\n/<br> ==> \n, <br>
+				[, patt, newStr] = reStr.split('/');
+				console.log(patt, newStr);
+				re = new RegExp(patt, 'g');    //'\n', 'g';
+				content = content.replace(re, newStr); //(re, '<br>')
+			}
+			//$('#srcContent').text(content);
+			//re = new RegExp('\n', 'g');    
+			//content = content.replace(re, '\r\n'); 
+			///tb = document.getElementById("srcContent");
+			///tb.value=content;
+			*/
+			$('#srcContent').val(content);
+		}, 
+		null);
+	}
+
+	//Helper function to serialize all the form fields into a JSON string
+	function composeData() {
+		/*    return JSON.stringify({
+		 "cat": $('input[name="cat"]:checked').val(),
+		 "data": $('#txtNote').val()
+		 })
+		 */
+		//alert($('#selRelation option:selected').val());
+		var strRslt, rsltObj;
+		rsltObj = {
+			src: {
+				srcID:	srcId,
+				seq:  srcSeq,
+				//name:	$('#srcName').val(),
+				name:	$('#srcName').text(),
+				meta:	$('#srcMeta').text(),
+				//note: 	$('#srcNote').html()
+				//note: 	editor.root.innerHTML,
+				//content: srcText.root.innerHTML,
+				srcContent: $('#srcContent').val()
+			}	
+		};
+		
+		//alert(typeof rsltObj );
+		let json= JSON.stringify(rsltObj)
+
+		//return strRslt;
+		return json;
+	}
+/*	
+	function IsNoteValid(str) {
+		try {
+		  //var json = JSON.parse("{"+str+"}");
+		  var json = JSON.parse(str);
+		  return (typeof json === 'object');
+		} catch (e) {
+   			alert("invalude format: \n"+str);
+		  return false;
+		}
+	}
+*/	
+	
+	var sel;
+</script>
+
+<style>
+</style>
+
+</head>
+
+<body onload="initPage()">
+	<form id="noteFrm" enctype='text/plain' action="/html/">
+
+	<div id="srcRowName" class="row" >
+	  <div class="column-2">
+		<div id="srcName" name="srcName" contenteditable="true">
+	  </div>
+	</div>
+	
+	<div id="srcRowMeta" class="row">
+	  <div class="column-2">
+	    <div id="srcMeta" class="editMeta" contenteditable="true">
+	    </div>  
+	  </div>
+	</div>
+			
+	<div id="srcRowNote" class="row">
+		<div class="column-2">
+			<!--  div id="srcContent" name="srcContent" contenteditable="true" -->
+			<textarea id="srcContent" name="srcContent" cols=80 rows=20 ></textarea>
+		</div>
+	</div>			
+
+<div id="rowAct" class="row">
+	<div class="column-1">
+	</div>
+	<div class="column-2">
+	<button onclick="replSrc()">replace</button> <button onclick="saveStgSrc(composeData)">create</button> 
+	</div>
+</div>		
+</form>
+
+</body>
+</html>
