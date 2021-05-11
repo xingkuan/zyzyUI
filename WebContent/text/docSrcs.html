@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="../elasticsearch-js/elasticsearch.js"></script>
+        <script src="../d3JS/d3.min.js"></script>
+        <script src="esTable.js"></script>
+	    <style>
+		    body {
+		        font: 12px sans-serif;
+		    }
+	
+		    table td, table td * {
+		      border: 1px solid black;
+		      vertical-align: top;
+		      text-align: left;
+		    }
+		    
+		    p {
+		    float:left;
+		    width: 100%;
+		    margin: 10px 0;
+		    padding: 5px;
+		    border: 1px solid #999;
+			}
+    	</style>
+	    <title>Test</title>
+
+		<script>
+			function initPage(){
+				var urlParams = new URLSearchParams(window.location.search);
+			    const   keys = urlParams.keys(),
+			    	values = urlParams.values(),
+			    	entries = urlParams.entries();
+			    console.log(entries[0]);
+			    zyzyESdocsByTitle(urlParams.get('srcTitle'));
+			}
+		</script>
+	</head>
+	<body onload="initPage()">
+		 <div id="main" >
+		 </div>
+	 </body>
+
+</html>

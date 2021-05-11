@@ -131,8 +131,11 @@
 		let ver=0;
 		srcUrl="/zyzySvc/STG/getStgContentByID/"+srcId+"/"+srcSeq+"/"+ver;
 	
-		regExs = getRESTsingleRow("/zyzySvc/STG/getSTGRegHTML/"+srcId);
-		regExs = regExs['regex_html'].split("\n");
+		regExs=[];
+		temp = getRESTsingleRow("/zyzySvc/STG/getSTGRegHTML/"+srcId);
+		temp = temp['regex_html'];
+		if(temp)
+			regExs = temp.split("\n");
 		//** functions load up page contents ***
 		{
 			function setupSrcFn(/*regExs*/){
@@ -147,6 +150,7 @@
 					console.log(patt, newStr);
 					re = new RegExp(patt, 'g');    //'\n', 'g';
 					note = note.replaceAll(re, newStr); //(re, '<br>')
+					console.log(note);
 				}
 				////
 				meta=JSON.stringify(jsonData[0]["meta"]);
@@ -186,24 +190,7 @@
 		setupNavigator();		
 	}
 	
-	function getRESTsingleRow(srcUrl){
-		//let srcUrl = "/zyzySvc/STG/getSTGRegTEXT/"+srcId;
-		var rslt=null;
-		$.ajax({
-			type: "GET",
-			url: srcUrl,
-			async: false,
-			success: function(data) {
-				if (data != null) {
-					rslt = data[0];
-				}
-			},
-			error: function(jqXHR, textStatus, errorThrown) {
-				alert('error: ' + textStatus + errorThrown);
-			}
-		});
-		return rslt;		
-	}
+
 
 	function setupNavigator(){
 		preSeq = getRESTsingleRow("/zyzySvc/STG/getSeqPrev?sid="+srcId+"&seq="+srcSeq);
