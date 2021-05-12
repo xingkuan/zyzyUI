@@ -72,9 +72,12 @@ function saveStgSrc(replacing, composeDataFn) {
 		//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
 		data : composeDataFn(),
 		success : function(data, textStatus, jqXHR) {
-			$('#srcContent').val('note created successfully');
+			//$('#srcContent').val('note created successfully');
 			//alert('note created successfully');
-                window.location = "/html/";
+            //window.location = window.location.href;
+            //loadPage(srcId, srcSeq);
+            //location.reload();
+            window.location = thisUrl;
 		},
 		error : function(jqXHR, textStatus, errorThrown) {
 			alert('error: ' + textStatus + errorThrown);

@@ -11,10 +11,11 @@
 <script src="stgSrc.js"></script>
 
 <script>
-	var srcId, srcSeq;
+	var srcId, srcSeq, thisUrl;
 	
 	function initPage(){
-		var urlParams = new URLSearchParams(window.location.search);
+		thisUrl=window.location.search;
+		var urlParams = new URLSearchParams(thisUrl);
 	    const   keys = urlParams.keys(),
 	    	values = urlParams.values(),
 	    	entries = urlParams.entries();
@@ -45,6 +46,7 @@
 */
 		loadPage(srcId, srcSeq);
 	}
+	
 	
 	function loadPage(srcId, srcSeq){
 	    let ver=0;
@@ -102,7 +104,7 @@
 				seq:  srcSeq,
 				//name:	$('#srcName').val(),
 				name:	$('#srcName').text(),
-				meta:	$('#srcMeta').text(),
+				meta:	$('#srcMeta').val(),
 				//note: 	$('#srcNote').html()
 				//note: 	editor.root.innerHTML,
 				//content: srcText.root.innerHTML,
@@ -145,7 +147,7 @@
 	</div>		
 <br>	
 
-	<form id="noteFrm" enctype='text/plain' action="/html/">
+	<!-- form id="noteFrm" enctype='text/plain'  -->
 
 	<div id="srcRowName" class="row" >
 	  <div class="column-2">
@@ -175,7 +177,7 @@
 	<button onclick="saveStgSrc(true, composeData)">replace</button> <button onclick="saveStgSrc(false, composeData)">create</button> 
 	</div>
 </div>		
-</form>
+<!-- /form  -->
 
 </body>
 </html>
