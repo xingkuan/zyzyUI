@@ -54,6 +54,7 @@
 	    setTextFields(srcUrl, function(){
 			//$('#srcMeta').text(JSON.stringify(jsonData[0]["meta"]));
 			$('#srcMeta').text(jsonData[0]["meta"]);
+			$('#srcProp').text(jsonData[0]["properties"]);
 			$('#srcName').text(jsonData[0]["name"]);
 			content = jsonData[0]["content"]
 			$('#srcContent').val(content);
@@ -105,6 +106,7 @@
 				//name:	$('#srcName').val(),
 				name:	$('#srcName').text(),
 				meta:	$('#srcMeta').val(),
+				properties:	$('#srcProp').val(),
 				//note: 	$('#srcNote').html()
 				//note: 	editor.root.innerHTML,
 				//content: srcText.root.innerHTML,
@@ -160,6 +162,7 @@
 	    <!-- div id="srcMeta" class="editMeta" contenteditable="true" >
 	    </div -->  
 	    <textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
+	    <textarea id="srcProp" name="srcProp" cols=40 rows=5 ></textarea>
 	  </div>
 	</div>
 			

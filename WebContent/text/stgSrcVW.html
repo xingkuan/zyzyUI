@@ -8,142 +8,234 @@
 <script src="../elasticsearch-js/elasticsearch.js"></script>
 <script src="../d3JS/d3.js"></script>
 
+<link rel="stylesheet" href="../textassist/styles.css" media="screen">
+<link rel="stylesheet" href="../textassist/textassist.css" media="screen">
+<script src="../textassist/textassist.min.js"></script>
+
+<!--  script src="author.js"></script  -->
 <script src="stgSrc.js"></script>
 <style>
-#btns {
-    padding-left: 5 px;
-	font-size: 12px;
-    }
-
-#noteTitle {
-    padding-left: 5 px;
-    font-weight: bold;
-	font-size: 14px;
-    }
-
-#noteMeta {
-    padding-left: 5 px;
-	font-size: 12px;
-    }
-
-#noteContent {
-    padding-left: 5 px;
-	font-size: 12px;
-    }
-
-.sec-title{
-    font-weight: bold;
-}
-
-</style>
-
-<script>
-/*
-	$(document).ready(function() {
-	    var i = 215;
-	    loadData(i);
-	    $('#seqNum').val(i);
-	//});
-	    $('#next').on('click', function () {
-	        //console.log(i + "next");
-	        i += 5;
-	        $('#seqNum').val(i);
-	        loadData(i);
-	    });
-	    $('#prev').on('click', function () {
-	        //console.log("prev" + i);
-	        i -= 5;
-	        $('#seqNum').val(i);
-	        loadData(i);
-	    });
-	
-	    $('#seqNum').on('change', function () {
-	        i = parseInt($('#seqNum').val());
-	        //console.log(i);
-	        loadData(i);
-	    });
-	});	    
-
-	function loadData(id){
-		setTextFields("/zyzySvc/reader/note/getByID/"+id+"/0",
-    		function(){
-	    		$('#noteMeta').html(jsonData[0]["meta"]);
-				$('#noteTitle').html(jsonData[0]["name"]);
-				$('#noteContent').html(jsonData[0]["val"]);
-			}, 
-			null);
-    }
-*/	
-	function initPage(){
-		var urlParams = new URLSearchParams(window.location.search);
-	    const   keys = urlParams.keys(),
-	    	values = urlParams.values(),
-	    	entries = urlParams.entries();
-	    console.log(entries[0]);
-	    srcId=urlParams.get('sid');
-	    srcSeq=urlParams.get('sseq');
-
-		//read regular expressions from info_src table. could be multiple lines
-		let srcUrl = "/zyzySvc/STG/getSTGRegHTML/"+srcId;
-		var regExs;
-		$.ajax({
-			type: "GET",
-			url: srcUrl,
-			async: false,
-			success: function(data) {
-				if (data != null) {
-					regExs = data[0]['regex_html'];
-				}
-			},
-			error: function(jqXHR, textStatus, errorThrown) {
-				alert('error: ' + textStatus + errorThrown);
-			}
-		});		
-		regExs=regExs.split("\n");
-		for (const reStr of regExs) {
-			console.log(reStr);
-		}
-	    //zyzyStgDocById(srcId, srcSeq, 0);
-	    let ver=0;
-	    srcUrl="/zyzySvc/STG/getByID/"+srcId+"/"+srcSeq+"/"+ver;
-	    setTextFields(srcUrl,
-	    		function(){
-		    		$('#noteMeta').html(JSON.stringify(jsonData[0]["meta"]));
-					$('#noteTitle').html(jsonData[0]["name"]);
-					content = jsonData[0]["content"]
-					for (const reStr of regExs) {
-						console.log(reStr);
-						//var patt, repStr;  // /\n/<br> ==> \n, <br>
-						[, patt, newStr] = reStr.split('/');
-						console.log(patt, newStr);
-						re = new RegExp(patt, 'g');    //'\n', 'g';
-						content = content.replace(re, newStr); //(re, '<br>')
-					}
-					$('#noteContent').html(content);
-		    		//$('#noteMeta').text(JSON.stringify(jsonData[0]["meta"]));
-					//$('#noteTitle').text(jsonData[0]["name"]);
-					//$('#noteContent').text(jsonData[0]["content"]);
-				}, 
-				null);
-
+	#editor-container {
+	  height: 375px;
 	}
 	
+	.ql-snow span.ql-picker.ql-box {
+	    width: 18px;
+	}
+	
+	.ql-button {
+	    text-align: center;
+	    text-decoration: none;
+	    font-size: 12px;
+	}
+  	.sec-title1 {
+	    font-weight: bold;
+	    font-size: 20px;
+	}
+  	.sec-title2 {
+	    font-weight: bold;
+	    font-size: 16px;
+	}
+  	.sec-title3 {
+	    font-weight: bold;
+	    font-size: 14px;
+	}
+  	.sec-text {
+	    font-weight: normal;
+	}
+	
+	.noteSec {
+		padding-left: 5 px;
+	    font-weight: bold;
+		font-size: 12px;
+		color: red;
+	}
+
+	select {
+		padding:2px;
+		margin-top:2px;
+		line-height:1;
+		border-radius:2px;
+		outline:none
+	}
+	option {
+		padding:2px;
+		margin-top:2px;
+		line-height:0;
+		border-radius:2px;
+		outline:none
+	}
+	
+	div.oTitle { 
+		font-weight: bold;
+		font-size: 30px;
+		height: 30px;
+		width: 100px;
+	}
+	
+	.row:after {
+	  content: "";
+	  display: table;
+	  clear: both;
+	}
+	.column-1, .column-2 {
+	  float: left;
+	  position: relative;
+	}
+	.column-1 {
+	  width: 100px;
+	  margin-top:10px;
+	}
+	.column-2 {
+		width: 80%;
+		margin-top: 10px;
+	}
+	
+	.editMeta {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 50px;
+	  width: 100%;
+	}
+	
+	.editorContainer {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 400px;
+	  width: 100%;
+	}
+</style>
+<script>
+	var srcId, srcSeq;
+
+	function initPage(){
+		var urlParams = new URLSearchParams(window.location.search);
+		const   keys = urlParams.keys(),
+		    	values = urlParams.values(),
+		    	entries = urlParams.entries();
+		console.log(entries[0]);
+		srcId=urlParams.get('sid');
+		srcSeq=urlParams.get('sseq');
+	
+		loadPage(srcId, srcSeq);
+	}
+	function loadPage(srcId, srcSeq){
+		let ver=0;
+		srcUrl="/zyzySvc/STG/getStgContentByID/"+srcId+"/"+srcSeq+"/"+ver;
+	
+		regExs=[];
+		temp = getRESTsingleRow("/zyzySvc/STG/getSTGRegHTML/"+srcId);
+		temp = temp['regex_html'];
+		if(temp)
+			regExs = temp.split("\n");
+		//** functions load up page contents ***
+		{
+			function setupSrcFn(/*regExs*/){
+				nname=jsonData[0]["name"];
+				note=jsonData[0]["content"];
+				console.log(regExs);
+				////
+				for (const reStr of regExs) {
+					console.log(reStr);
+					//var patt, repStr;  // /\n/<br> ==> \n, <br>
+					[, patt, newStr] = reStr.split('/');
+					console.log(patt, newStr);
+					re = new RegExp(patt, 'g');    //'\n', 'g';
+					note = note.replaceAll(re, newStr); //(re, '<br>')
+					console.log(note);
+				}
+				////
+				meta=JSON.stringify(jsonData[0]["meta"]);
+				meta = meta.replace(/{|}|"/g, ''); 
+				meta = meta.replace(/,/g, ",\n"); 
+				console.log(meta);
+				
+				//template=jsonData[0]["template"];   
+				$('#srcName').html(nname);
+				$("#srcMeta").html(meta);
+				$("#srcNote").html(note);
+				$("#seqNum").text(srcSeq); 
+				
+			}
+			
+			function setupSrcFnX(){
+		       	$("#TempList").show();
+		       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
+			}
+		}
+		
+		setTextFields(srcUrl, 
+				setupSrcFn,  //OK,
+				//setupSrcFn(regExs),  //NOT OK
+				//function(){setupSrcFn(regExs)},  //Needed 
+				setupSrcFnX);
+				
+		setupNavigator();		
+	}
+	
+
+
+	function setupNavigator(){
+		preSeq = getRESTsingleRow("/zyzySvc/STG/getSeqPrev?sid="+srcId+"&seq="+srcSeq);
+		preSeq=preSeq["prevseq"];
+		nextSeq = getRESTsingleRow("/zyzySvc/STG/getSeqNext?sid="+srcId+"&seq="+srcSeq);
+		nextSeq=nextSeq["nextseq"];
+		if( preSeq){  
+		    /*$('#prev').on('click', function () {
+		        loadPage(srcId, preSeq);
+		    });*/
+		    document.getElementById("prev").href = "?sid="+srcId+"&sseq="+preSeq+"&ver=0";
+	    }else{  //disable it
+	    	//$('#prev').style.display = "none";
+			document.getElementById("prev").style.display = "none";
+	    }
+	    
+	    if(nextSeq){
+		    /*$('#next').on('click', function () {
+		        loadPage(srcId, nextSeq);
+		    });*/
+			document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
+		}else {//disable it
+			document.getElementById("next").style.display = "none";
+		}
+	}
+
+	var sel;
 </script>
 
 </head>
 
 <body onload="initPage()">
-<!-- 
-<div id="btns">
-<a id="prev" href="#" >&laquo; Previous</a>
-<input id="seqNum" size=3>
-<a id="next" href="#" >Next &raquo;</a>
-</div>		
- -->
-<div id="noteTitle" >title</div>		
-<div id="noteMeta" >meta</div>		
-<div id="noteContent" >content</div>	
-
+	<div id="btns">
+		<a style="float: left;" id="prev" href="#" >&laquo; Previous</a>
+		<div id="seqNum" style="float: left;"></div>
+		<a style="float: left;" id="next" href="#" >Next &raquo;</a>
+	</div>		
+<br>
+	
+		<div id="srcRowName" class="row" >    <!-- row 1 -->
+		  <div class="column-1">Name:</div> 
+		  <div id="srcName" name="srcName" class="column-2">
+		  </div>
+		</div>
+	
+		<div id="srcRowMeta" class="row">    <!-- row 2 -->   
+		  <div class="column-1">Meta:
+		  </div> 
+ 		    <div  id="srcMeta" name="srcMeta" class="column-2">
+		    </div>  
+		  </div>
+		</div>
+			
+		<div id="srcRowNote" class="row">    <!-- row 3 -->
+				<div id="srcNote" ></div>
+			</div>
+		</div>			
+	
 </body>
 
 </html>
