@@ -52,9 +52,20 @@
 	    let ver=0;
 	    srcUrl="/zyzySvc/STG/getStgContentByID/"+srcId+"/"+srcSeq+"/"+ver;
 	    setTextFields(srcUrl, function(){
+			meta=JSON.stringify(jsonData[0]["meta"]);
+				
+			imgURL=null;
+			temp=meta.match("imgs:\\[(.*?)\\]");
+			if (temp!=null){
+				temp=temp[1].split(',')[0].trim()
+				imgURL='http://localhost/img/'+temp;
+			}
+				
 			//$('#srcMeta').text(JSON.stringify(jsonData[0]["meta"]));
 			$('#srcMeta').text(jsonData[0]["meta"]);
 			$('#srcProp').text(jsonData[0]["properties"]);
+			if(imgURL!=null)
+				$("#srcImg").html('<img src="'+imgURL+'" alt="">');
 			$('#srcName').text(jsonData[0]["name"]);
 			content = jsonData[0]["content"]
 			$('#srcContent').val(content);
@@ -163,6 +174,7 @@
 	    </div -->  
 	    <textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
 	    <textarea id="srcProp" name="srcProp" cols=40 rows=5 ></textarea>
+	    <div  id="srcImg"></div>
 	  </div>
 	</div>
 			

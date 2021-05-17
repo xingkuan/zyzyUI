@@ -150,6 +150,13 @@
 				}
 				////
 				meta=JSON.stringify(jsonData[0]["meta"]);
+				imgURL=null;
+				temp=meta.match("imgs:\\[(.*?)\\]");
+				if (temp!=null){
+					temp=temp[1].split(',')[0].trim()
+					imgURL='http://localhost/img/'+temp;
+				}
+				console.log(imgURL);
 				meta = meta.replace(/{|}|"/g, ''); 
 				meta = meta.replace(/,/g, ",\n"); 
 				console.log(meta);
@@ -157,6 +164,9 @@
 				//template=jsonData[0]["template"];   
 				$('#srcName').html(nname);
 				$("#srcMeta").html(meta);
+				if(imgURL!=null)
+					$("#srcImg").html('<img src="'+imgURL+'" alt="">');
+					//$("#srcImg").html='test test';
 				$("#srcNote").html(note);
 				$("#seqNum").text(srcSeq); 
 				
@@ -226,8 +236,9 @@
 		<div id="srcRowMeta" class="row">    <!-- row 2 -->   
 		  <div class="column-1">Meta:
 		  </div> 
- 		    <div  id="srcMeta" name="srcMeta" class="column-2">
-		    </div>  
+		  <div class="column-2">
+ 		    <div  id="srcMeta"></div>
+ 		    <div  id="srcImg"></div>  
 		  </div>
 		</div>
 			

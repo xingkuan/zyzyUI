@@ -154,6 +154,14 @@
 				}
 				////
 				meta=JSON.stringify(jsonData[0]["meta"]);
+				
+				imgURL=null;
+				temp=meta.match("imgs:\\[(.*?)\\]");
+				if (temp!=null){
+					temp=temp[1].split(',')[0].trim()
+					imgURL='http://localhost/img/'+temp;
+				}
+				
 				meta = meta.replace(/{|}|"/g, ''); 
 				meta = meta.replace(/,/g, ",\n"); 
 				console.log(meta);
@@ -161,6 +169,8 @@
 				//template=jsonData[0]["template"];   
 				$('#srcName').val(nname);
 				$("#srcMeta").text(meta);
+				if(imgURL!=null)
+					$("#srcImg").html('<img src="'+imgURL+'" alt="">');
 				$("#seqNum").text(srcSeq); 
 				srcText.clipboard.dangerouslyPasteHTML(note, "api");
 				//setSelectedIndex(document.getElementById("srcTempList"),template);
@@ -281,6 +291,7 @@
 		  <div class="column-2">
 		    <!-- div id="srcMeta" class="editMeta" contenteditable="true"  -->
 		    <textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
+		    <div  id="srcImg"></div> 
 		    </div>  
 		  </div>
 		</div>
