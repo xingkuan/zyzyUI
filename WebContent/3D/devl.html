@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>3D JL sys</title>
+</head>
+
+<script src='javascripts/three.min.js'></script>
+<script src='javascripts/OrbitControls.js'></script>
+<script src="javascripts/GLTFLoader.js"></script>
+<script src="javascripts/dat.gui.min.js"></script>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+
+<style>
+
+html, body {
+        margin: 0;
+        height: 100%;
+    }
+
+#gui {
+position: absolute;  
+   top:0;left:0;
+   height: 20px;
+}
+#c {
+   margin-top: 0px;
+   width: 100%;  
+   height: 100%;
+   display: block;
+	/*position: absolute;  overlay layers?*/
+	left: 0; top: 0;
+}
+   
+#textDivL {
+	background-color: lightblue;
+    display: block;
+    float: left;
+}
+#textDivP {
+	background-color: lightblue;
+    display: block;
+    float: left;
+}
+
+.container {
+    width: 100%;
+    height: 100%;
+}
+.col1 {
+	float: left;
+	width: 60%;
+	height: 100%;
+}
+.col2 {
+	float: left;
+	width: 40%;
+}
+
+.recHead{
+	margin-top: 15px;
+	font-weight: bold;
+}
+.recText{
+	margin-top: 10px;
+	font-size: 80%;
+}
+
+
+/* containers for lables 
+   NOTE: I though "//" could be used for comments... and end up debuging for 
+   hours !!! as it is silently ignored */
+div#labels {
+  position: absolute;  /* let us position ourself inside the container */
+  left: 0;             /* make our position the top left of the container */
+  top: 0;
+  color: white;
+  z-index: 0;          /* make a new stacking context so children don't sort with rest of page */
+}
+/* for lable themselves */
+div#labels div {
+  position: absolute;  /* let us position them inside the container */
+  left: 0;             /* make their default position the top left of the container */
+  top: 0;
+  /*nogood flex: 0 0 auto; width: auto;*/ 
+  /*nogood display: inline-block; table; inline; fit-content; */  
+  /*nogood flex-wrap:nowrap;*/
+  /* background-color: #1e730a91; */
+   width: 30px;
+  cursor: pointer;     /* change the cursor to a hand when over us */
+  font-size: 10px;
+  user-select: none;   /* don't let the text get selected */
+  /*text-shadow:         .. create a black outline 
+    -1px -1px 0 #000,
+     0   -1px 0 #000,
+     1px -1px 0 #000,
+     1px  0   0 #000,
+     1px  1px 0 #000,
+     0    1px 0 #000,
+    -1px  1px 0 #000,
+    -1px  0   0 #000; */
+}
+div#labels div:hover {
+  color: red;
+}
+
+
+#debug {
+  position: absolute;
+  left: 1em;
+  top: 1em;
+  padding: 1em;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-family: monospace;
+}
+</style>
+
+
+<body>
+<div id="debug">
+<div id="mouseCoScreen"></div>
+<div id="renderRect"></div>
+<div id="mouseCoNorm"></div>
+<div id="cameraCo"></div>
+<div id="intersectObjs"></div>
+</div>
+
+<div class="container">
+	<div class="col1">
+		<canvas id="c"></canvas>
+		 <div id="labels"></div>
+		<div id="gui"></div>
+	</div>
+	<div class="col2">
+		<div id="textDivL">test</div>
+		<div id="textDivP">test</div>
+	</div>
+</div>
+<canvas id="dummyCanvas" width="64" height="64"></canvas>
+
+ 
+<script type="x-shader/x-vertex" id="pvshader">
+	uniform float del;
+	attribute float size;
+	attribute vec3 positionsN;
+	varying vec3 vColor;
+	void main() {
+		vColor = color;
+		vec4 mvPosition = modelViewMatrix * vec4( position * (1.0-del) +positionsN * del, 1.0);
+		gl_PointSize = size * ( 300.0 / -mvPosition.z );
+		gl_Position = projectionMatrix * mvPosition;
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="pfshader">
+	uniform sampler2D texture;
+	varying vec3 vColor;
+	void main() {
+		gl_FragColor = vec4( vColor, 1.0 );
+		gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+	}
+</script>
+
+
+<script>
+/* global THREE */
+
+var modelObj, root;
+
+// JL objects group. Jingluo and Xuwei are added to this group.
+var jlObjs = new THREE.Object3D(); 
+
+// try use 2D HTML div for labeling (instead of Sprite) 
+const labelContainerElem = document.querySelector('#labels');
+let labels = [];
+//Labels ?
+var spritLst=[];
+
+//particle systems for simulating flow.
+var ptrObjs = new THREE.Object3D();  
+
+//used in raycast
+var interceptMark;   
+
+var camera, scene, renderer, controls; 
+
+const canvas = document.querySelector('#c');
+
+init();
+loadGLTF('as_fem2.glb');
+requestAnimationFrame(render);  // this way, "time" can be passed to render()
+
+//********************************************************
+function init() {
+  renderer = new THREE.WebGLRenderer({canvas: canvas});
+
+  const fov = 45;
+  const aspect = 2;  // the canvas default
+  const near = 30;
+  const far = 50;
+  camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.set(0, 10, 20);
+  camera.zoom = 0.5;
+  //camera.updateProjectionMatrix();
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color('black');
+
+  //setup lignts
+  {
+    const skyColor = 0xB1E1FF;  // light blue
+    const groundColor = 0xB97A20;  // brownish orange
+    const intensity = 1;
+    const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+    scene.add(light);
+  }
+
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(5, 10, 2);
+    scene.add(light);
+    scene.add(light.target);
+  }
+
+  // setup camera control
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.set(0, 5, 0);
+  controls.update();
+
+  // the ground
+  const planeSize = 40;
+  const loader = new THREE.TextureLoader();
+  const texture = loader.load('checker.png');
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.magFilter = THREE.NearestFilter;
+  const repeats = planeSize / 2;
+  texture.repeat.set(repeats, repeats);
+
+  const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+  const planeMat = new THREE.MeshPhongMaterial({
+    map: texture,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(planeGeo, planeMat);
+  mesh.rotation.x = Math.PI * -.5;
+  scene.add(mesh);
+  
+  scene.add(jlObjs);
+  scene.add(ptrObjs);
+
+  //testing transparency
+  /*{
+  var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+  var material = new THREE.MeshBasicMaterial( { 
+	  color: 0x00ff00,
+	   opacity: 0.8,
+	   side: THREE.SingleSide,
+	   //depthWrite: false,   // [2019.04.13] Don't understand it. But 
+	   //depthTest: false,    // it seems make it a ghost that can go through ...
+	   transparent: false,
+	  } );
+  var cube = new THREE.Mesh( geometry, material );
+  cube.position.set(1,3,0);
+  scene.add( cube ); 
+  }*/
+  
+  //mark a spot on selection (raycaster interception)
+  var geometry = new THREE.SphereBufferGeometry( 0.02 );
+  var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+  interceptMark = new THREE.Mesh( geometry, material );
+    interceptMark.visible = false;
+    scene.add( interceptMark );
+
+  // setup raycaster for interacting with interested object.
+  // ... raycaster and 2D mouse events
+  {
+    raycaster = new THREE.Raycaster();
+	
+	raycaster.linePrecision = 0.03;  //two big value can cause "lines" always in the raycaster intersection.
+	raycaster.params.Points.threshold = 0.03;
+	mouse = new THREE.Vector2();
+	//mouse = new THREE.Vector3();
+
+
+	document.addEventListener( 'click', onMouseDown, false );
+	//2021.05.21 seems make no sense !  document.addEventListener( 'touchstart', onDocumentTouchStart, false );   //for touch screen devices
+	
+	function onMouseDown( e ) {
+		e.preventDefault();
+		// (left, top) = (-1,-1), (right, top) = (1, -1)
+		//           (middle, middle) = (0,0)
+		// (left, bottom) = (-1,1), (right, top) = (1, 1)
+//2021.05.22 Try and TODO
+$("#mouseCoScreen").html("mouse(screen):"+e.clientX+","+e.clientY);	
+		var rect = renderer.domElement.getBoundingClientRect();
+$("#renderRect").html("rect:"+rect.left+","+rect.top+","+rect.right+","+rect.bottom);	
+		mouse.x = ( ( e.clientX - rect.left ) / ( rect.width - rect.left ) ) * 2 - 1;
+		mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
+$("#mouseCoNorm").html("mouse(rect):"+mouse.y+","+mouse.y);	
+		// ??? [2019.04.23] how about z? no effect !?  
+		//mouse.z = camera.position.z; 
+		//mouse.z = 0.5;
+	    //   mouse.unproject( camera );   
+	    //   mouse.normalize();
+$("#cameraCo").html("camera:"+camera.position.x+','+camera.position.y+','+camera.position.z);	        
+		raycaster.setFromCamera(mouse,camera);
+	
+		var intersects = raycaster.intersectObjects(jlObjs.children, true);
+		
+		console.log("intersected " + intersects.length);
+		
+		//intersects.forEach((child, ndx) => {  //Respond to the first only. Otherwise, 
+		//									  //the "line" seems will have a lot ...
+var intersectObjs="objs:<br>";
+$("#intersectObjs").html(intersectObjs);
+		if(intersects.length > 0){ 
+			child = intersects[0];		
+			var rawName = child.object.name;
+			console.log("... " + rawName);
+intersectObjs=intersectObjs+rawName+":("+child.point.x+","+child.point.y+","+child.point.z+")";
+$("#intersectObjs").html(intersectObjs);
+tryAddObj("Try", child.point);
+
+			if (rawName.startsWith("JL")) {  // JL related objects
+				interceptMark.visible = true;
+				interceptMark.position.copy( intersects[ 0 ].point );
+							
+				var ptrName = rawName.match('[0-9]{3}(.*?)[L|R]$');
+				//$('#textDiv').text(child.object.name);
+				if (ptrName == null){   // it is a line
+					console.log("raw name: ", rawName);
+					jlname = rawName.substring(2,);
+					//2019.04.12: exclude the last charactor, which represent segment of the line.
+					// TODO: better way for this?
+					getLineDetail("textDivL", jlname.substr(0, jlname.length-1));
+					//getLineDetail("textDivL", "手厥阴心包经");
+				}else if (ptrName.length == 2){    // it is a point
+					getPointDetail("textDivP", ptrName[1]);
+				}
+			}else{
+				//interceptMark.visible = false;
+			}
+		}
+		//}); //forEach
+	}	
+	
+	function onDocumentTouchStart( e ) {
+		/* 2021.05.21 make no sense ?!
+		e.preventDefault();
+		e.clientX = e.touches[0].clinetX;
+		e.clientY = e.touches[0].clinetY;  */
+		onMouseDown(e);
+	}
+	//// object picking  
+
+
+  }
+
+  
+}
+//2021.05.23 
+function tryAddObj(sName, ptPos){
+	//console.log("point co:", ptPos);
+	var ptSph;
+	{  // the point spot
+		ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
+		ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
+		ptSph = new THREE.Mesh( ptGeo, ptMat );
+		ptSph.position.set(ptPos.x, ptPos.y, ptPos.z);
+		// ...
+		ptSph.name = sName; 
+		scene.add( ptSph );   // to be displayed as 3D obj
+		jlObjs.add(ptSph);  // If moved before scene.add(), the added will disarear when exit this closure ?
+	}
+}
+
+
+function loadGLTF(gltfName){
+    const gltfLoader = new THREE.GLTFLoader();
+    gltfLoader.load(gltfName, (gltf) => {
+      root = gltf.scene;
+      console.log(root.name);
+      scene.add(root);
+
+      console.log(dumpObject(root).join('\n'));
+      //console.log(dumpObject(scene).join('\n'));
+
+      modelObj = scene.getObjectByName("asian_female_teen", true);
+//2021.05.22 DEVEL: so user can interactively contribute ...
+jlObjs.add(modelObj);
+
+      drawLineFromVertices('JLSYMDCJ', new THREE.Color("rgb(0, 255, 0)"), {r:100, g:255, b:100, a:0.8});   
+      addParticles('JLSYMDCJ', new THREE.Color("rgb(0, 200, 0)") , 0.2);
+
+      //
+      drawLineFromVertices('JLZTYPGJ', new THREE.Color("rgb(255, 0, 0)"), {r:255, g:100, b:100, a:0.8});   
+      addParticles('JLZTYPGJ', new THREE.Color("rgb(200, 0, 0)") , 0.2);
+      //
+      drawLineFromVertices('JLSTYHJ', new THREE.Color("rgb(150, 150, 0)"), {r:255, g:100, b:100, a:0.8});   
+      addParticles('JLSTYHJ', new THREE.Color("rgb(100, 100, 0)") , 0.2);
+      
+      initCtrl();
+	  // compute the box that contains all the stuff
+	  // from root and below
+	  const box = new THREE.Box3().setFromObject(root);
+	
+	  const boxSize = box.getSize(new THREE.Vector3()).length();
+	  const boxCenter = box.getCenter(new THREE.Vector3());
+	
+	  // set the camera to frame the box
+	  frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
+
+	  // update the Trackball controls to handle the new size
+      controls.maxDistance = boxSize * 10;
+	  controls.target.copy(boxCenter);
+	  controls.update();
+    });
+}
+
+//*************************************************************
+//draw JingLuo as path
+function drawLineFromVertices(lname, lnColor, ptColor){
+    var pts = root.getObjectByName(lname);   // get all the point (Empty object), from begining to end
+
+    var sp, ptrName, points=[];
+	var preSegName="";
+    // create the points
+	pts.children.forEach((child, ndx) => {
+        const isLast = ndx ;
+        ptrName = child.name.match('L([ABCDE]?)[0-9]{3}(.*?)[L|R]$');   //reg exp for extracting point name from object name: 
+        																//JL<linename>.L[A|B|C|D|E}.nnn.<point name>.[L|R]. A...E for line branch. 
+        																//TODO: I wish I had a better approach!
+        if (ptrName[2] != "xx") {
+        	//construct point coodinates
+        	let ptPos = {x: child.position.x+pts.position.x,
+        			y: child.position.y+pts.position.y,
+        			z: child.position.z+pts.position.z };
+        	// translate userData["spriteCo"], the position in Blender co, to Three.js co.
+        	let spritePos = {x:child.userData["spriteCo"][0]+pts.position.x, 
+        			y: child.userData["spriteCo"][2]+pts.position.y,  
+        			z: -child.userData["spriteCo"][1]+pts.position.z  
+        			}; 
+
+        	drawPoint(child.name, 
+        				ptPos,  // the actual accupuncuture point; Displayed as a spot! 
+						spritePos,  // pos for displaying a sprite        					 
+        				ptrName[2],
+        				ptColor);
+        }
+        // Draw lines; But not necessary as it can be statically modeled from Blender. 
+        // 2019.04.12] TODO: save the code here in case needed in the future or change approach.
+        if((preSegName=="")||(ptrName[1] == preSegName)){
+        	points.push(child.position);   
+        }else{
+        	DrawLine(points, pts.position, lname+preSegName);
+        	//clean up the array and start for a new segment:
+        	points=[];
+        	preSegName="";
+        	points.push(child.position);
+        }
+    	preSegName=ptrName[1];
+    });
+    //the last segment in the least.
+	DrawLine(points, pts.position, lname+preSegName);
+	
+	function DrawLine(ptsLst, loc, nm){
+		curve = new THREE.CatmullRomCurve3(ptsLst, 
+				false, //closed
+				"catmullrom",  // Type
+		        1);  // Tension
+		const ps = curve.getPoints(100);
+		const geometry = new THREE.BufferGeometry().setFromPoints(ps);
+		const material = new THREE.LineBasicMaterial({
+			//color: 0x00ff00,
+			color: lnColor,
+			linewidth: 2,
+			transparent: true, opacity: 0.8 ,
+		});
+		curveObject = new THREE.Line(geometry, material);
+		//curveObject.position.set(pts.position.x,pts.position.y,pts.position.z);
+		curveObject.position.set(loc.x, loc.y, loc.z);
+		//curveObject.name=lname;
+		curveObject.name=nm;
+		jlObjs.add(curveObject);
+	}		
+}
+
+//Draw XueWei
+function drawPoint(sName, ptPos, spritePos, sText, bc){
+	//console.log("point co:", ptPos);
+	var ptSph;
+	//console.log("sprite co:", spritePos);
+	{  // the point spot
+		ptGeo = new THREE.SphereGeometry( 0.01, 4, 4 );
+		//let ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
+		ptMat = new THREE.MeshBasicMaterial( {color: bc} );
+		ptSph = new THREE.Mesh( ptGeo, ptMat );
+		ptSph.position.set(ptPos.x, ptPos.y, ptPos.z);
+		// ...
+		ptSph.name = sName+"tt";  // add "tt" to have it different from sprite's name.
+		scene.add( ptSph );   // to be displayed as 3D obj
+		jlObjs.add(ptSph);  // If moved before scene.add(), the added will disarear when exit this closure ?
+		//jlObjs.push(ptSph);
+	}
+	{
+	  const elem = document.createElement('div');
+	  elem.id = sName;
+	  //elem.textContent = sText;
+	  //elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
+	  elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + sText + '\');">' +sText + '</a>';
+	  labelContainerElem.appendChild(elem);
+	  // and add to lables array, also ptSph, so it can be checked by raycaster	
+	  //labels.push({elem, spritePos, ptSph});
+	  // TODO: to use dumy object for note locations ... maybe too heavey, but that is what I can come up for now
+		let noteGeo = new THREE.SphereGeometry( 0.01, 4, 4 );
+		let noteMat = new THREE.MeshBasicMaterial( {color: bc} );
+		noteSph = new THREE.Mesh( noteGeo, noteMat );
+		noteSph.position.set(spritePos.x, spritePos.y, spritePos.z);
+		noteSph.name = sName; 
+		labels.push({elem, noteSph, ptSph});
+	  
+	/*	
+		// the textSprite   
+		const fontsize = 18;
+		const fontface = "Arial"; //"sans-serif"
+		//var spriteAlignment = THREE.SpriteAlignment.topLeft; // no more!
+		
+		let mycanvas = document.createElement("canvas");
+		//mycanvas.id = sName;   // does it even matter ?
+		mycanvas.width = 64;
+		mycanvas.height = 64;
+		//document.body.appendChild(mycanvas);  // commented out as it is not to be shown.
+    	let sCtx = mycanvas.getContext('2d');
+
+	    // border color
+	    borderThickness=1;
+	    sCtx.strokeStyle = "rgba(0, 0, 255, 1.0)";
+
+        // text ... 
+	    sCtx.font = "Bold " + fontsize + "px " + fontface; 
+	    // background, frame:
+	    sCtx.fillStyle="rgba(" + bc.r + "," + bc.g + "," + bc.b + "," + bc.a + ")";
+		let metrics = sCtx.measureText( sText );
+		let textWidth = metrics.width;
+	    roundRect(sCtx, borderThickness/2, borderThickness/2, 
+			  textWidth + 4*borderThickness, fontsize + borderThickness, 2);
+		// ... text
+	    sCtx.fillStyle = "rgba(0, 0, 0, 1.0)";
+	    sCtx.textAlign = "left";
+	    sCtx.textBaseline = "bottom";
+	    sCtx.fillText(sText, borderThickness, fontsize + 2*borderThickness);
+
+	    // canvas contents will be used for a texture
+	    spTexture = new THREE.CanvasTexture(mycanvas);
+ 	    const spriteMaterial = new THREE.SpriteMaterial({
+	      map: spTexture,
+	      alphaTest: 0.5,
+	      transparent: true,
+	    //  opacity: 1,
+	    //  depthTest: false,
+	    //  depthWrite: false,
+	    //  useScreenCoordinates: false, alignment: spriteAlignment, // no more!
+	    });
+	    sprite = new THREE.Sprite(spriteMaterial);
+	    //sprite.position.set(2, 12, 0);
+	    sprite.position.set(spritePos.x, spritePos.y, spritePos.z);  //relative to ?
+	    sprite.scale.set(0.4, 0.4, 0.001);   // width, hight, ?  But don't make it 0, or it will "can't invert matrix" and high CPU!
+	    //sprite.center.set(0.5, 1);  //set the origin.
+	    sprite.center.set(0.5, 0.5);  //set the origin.
+	    sprite.name=sName;
+	    jlObjs.add(sprite);
+	    //jlObjs.push(sprite);
+	    */
+	} 
+	{ // a line to link the spot and the textSprite
+	   let lnGeo = new THREE.Geometry();
+	   lnGeo.vertices.push(
+		       new THREE.Vector3(ptPos.x, ptPos.y, ptPos.z),
+		       new THREE.Vector3(spritePos.x, spritePos.y, spritePos.z),
+        );
+	    // The Line
+	    let annoLn = new THREE.Line(lnGeo, new THREE.LineBasicMaterial({
+		                color: 0x00ff00
+		            }));
+	    scene.add(annoLn);
+	}
+	
+	function roundRect(ctx, x, y, w, h, r) {
+	    ctx.beginPath();
+	    ctx.moveTo(x+r, y);
+	    ctx.lineTo(x+w-r, y);
+	    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+	    ctx.lineTo(x+w, y+h-r);
+	    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+	    ctx.lineTo(x+r, y+h);
+	    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+	    ctx.lineTo(x, y+r);
+	    ctx.quadraticCurveTo(x, y, x+r, y);
+	    ctx.closePath();
+	    ctx.fill();
+		ctx.stroke();   
+	}
+}
+
+//Label each XueWei
+function updateLabels() {
+  const tempV = new THREE.Vector3();  // is it needed?
+  
+  camera.updateMatrixWorld(true, false);  //? 
+  
+  for (const label of labels) {
+    //const {elem, spritePos, ptSph } = label;
+    const {elem, noteSph, ptSph } = label;
+ 
+    // between camera and the point, is there anything blocking?
+    // First, get the normalized screen coordinate of that position
+    // x and y will be in the -1 to +1 range with x = -1 being
+    // on the left and y = -1 being on the bottom
+ 
+    ptSph.updateWorldMatrix(true, false);
+    ptSph.getWorldPosition(tempV);
+    tempV.project(camera);
+    //console.log(elem.innerText);
+	// console.log(tempV);
+    // convert the normalized position to CSS coordinates
+
+    // use raycaster evaluate if it is infront of the body model.
+    raycaster.setFromCamera(tempV, camera);
+    //let   ObjLst = new THREE.Object3D();
+    //ObjLst.add(ptSph);
+    //ObjLst.add(modelBody);
+    const intersectedObjects = raycaster.intersectObjects([ptSph, modelObj], true);
+    // We're visible if the first intersection is this object.
+    const show = intersectedObjects.length && ptSph === intersectedObjects[0].object;
+ 
+    if (!show|| Math.abs(tempV.z) > 1) {  // ? ... seems alwats < 1
+       //if (!show) {
+       // hide the label
+       elem.style.display = 'none';
+    } else {
+       // unhide the label
+       elem.style.display = '';
+       // get the note coordinate
+       noteSph.updateWorldMatrix(true, false);
+       noteSph.getWorldPosition(tempV);
+       tempV.project(camera);
+        
+       const x = (tempV.x * .5 + .5) * canvas.clientWidth;
+       const y = (tempV.y * -.5 + .5) * canvas.clientHeight;
+	    //console.log(x, y);
+	 
+        // move the elem to that position
+        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+        elem.style.transform = `translate(${x}px,${y}px)`;
+        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
+	 
+        // set the zIndex for sorting
+        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
+     }
+  }
+}
+	
+//test controls
+function initCtrl(){
+	//const gui = new dat.GUI;
+	const gui = new dat.GUI({ autoPlace: false });
+	//gui.domElement.id = 'gui';
+	document.getElementById('gui').appendChild(gui.domElement);
+	gui.close();
+	const folder = gui.addFolder("Test");
+	folder.open();
+	//test.add(obj.scale, 'x', 0,3).name("X").listen();
+	var leftArm = scene.getObjectByName( "Teen_rig_forearmL", true);
+	//var leftArm = scene.getObjectByName( "Teen_rig_IK_armL", true);
+	//var leftArm = scene.getObjectByName( "Teen_rig_chest", true);
+	folder.add(leftArm.rotation, 'x', 0,3).name("X").listen();
+}
+
+//Sprite
+
+function dumpVec3(v3, precision = 3) {
+	return `${v3.x.toFixed(precision)}, ${v3.y.toFixed(precision)}, ${v3.z.toFixed(precision)}`;
+}
+  
+function dumpObject(obj, lines = [], isLast = true, prefix = '') {
+    const localPrefix = isLast ? '└─' : '├─';
+	lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
+
+	const dataPrefix = obj.children.length
+	     ? (isLast ? '  │ ' : '│ │ ')
+	     : (isLast ? '    ' : '│   ');
+	lines.push(`${prefix}${dataPrefix}  pos: ${dumpVec3(obj.position)}`);
+	lines.push(`${prefix}${dataPrefix}  rot: ${dumpVec3(obj.rotation)}`);
+	lines.push(`${prefix}${dataPrefix}  scl: ${dumpVec3(obj.scale)}`);
+	  
+	const newPrefix = prefix + (isLast ? '  ' : '│ ');
+	const lastNdx = obj.children.length - 1;
+	obj.children.forEach((child, ndx) => {
+	    const isLast = ndx === lastNdx;
+	    dumpObject(child, lines, isLast, newPrefix);
+	});
+	return lines;
+}
+
+function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
+    const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
+    const halfFovY = THREE.Math.degToRad(camera.fov * .5);
+    const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
+    // compute a unit vector that points in the direction the camera is now
+    // in the xz plane from the center of the box
+    const direction = (new THREE.Vector3())
+        .subVectors(camera.position, boxCenter)
+        .multiply(new THREE.Vector3(1, 0, 1))
+        .normalize();
+
+    // move the camera to a position distance units way from the center
+    // in whatever direction the camera was from the center already
+    camera.position.copy(direction.multiplyScalar(distance).add(boxCenter));
+
+    // pick some near and far values for the frustum that
+    // will contain the box.
+    camera.near = boxSize / 100;
+    camera.far = boxSize * 100;
+
+    camera.updateProjectionMatrix();
+
+    // point the camera to look at the center of the box
+    camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
+}
+
+//var flowTexture;   //needed global var so it can be accessed from within render()  
+
+function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+}
+
+/*
+function render(time) {
+		time *= 0.0005;
+		if(flowTexture !=null)
+			flowTexture.offset.x = (time * 3 % 1);  
+  
+    if (resizeRendererToDisplaySize(renderer)) {
+      const canvas = renderer.domElement;
+      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      camera.updateProjectionMatrix();
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+}
+*/
+//function animate() {
+//    requestAnimationFrame(animate);
+//    controls.update();
+//    render();
+//}
+var lastRefresh=0;
+function render(time) {
+	//console.log(time/1000);
+    controls.update();
+    
+   if (resizeRendererToDisplaySize(renderer)) {
+       const canvas = renderer.domElement;
+       camera.aspect = canvas.clientWidth / canvas.clientHeight;
+       camera.updateProjectionMatrix();
+    }	
+
+    renderer.render(scene, camera);
+    //updateScreenPosition();  //will see if it is needed.
+    
+    // display lables
+    updateLabels();
+    
+    // simulate flow 
+    var nowT = Math.floor(time/1000)%10; //time in seconds; and keep track only of the last digits
+    if(nowT != lastRefresh){  //...update it only once / 1 sec
+    	updateParticles();
+        lastRefresh=nowT;
+    }
+    
+    requestAnimationFrame(render);
+}
+
+// particle system to simulate energy flow on lines
+function addParticles(lname, color, size){
+    var currSegName="", thisPtrName, nextPtrName;
+    var positionsO = {};  // 1st index for lineSegment' 2nd index for each point on the segment
+    var positionsN = {};  // for simulating flow
+	var colors = {};
+	var sizes = {};
+	//var color = new THREE.Color();
+	
+    var pts = root.getObjectByName(lname);   // get all the point (Empty object), from begining to end
+	var parCnt = pts.children.length, child=pts.children;
+    var firstPtrName = child[0].name.match('L([ABCDE]?)[0-9]{3}(.*?)[L|R]$');
+    currSegName = firstPtrName[1];
+    positionsO[currSegName]=[];
+    positionsN[currSegName]=[];
+    colors[currSegName]=[];
+    sizes[currSegName]=[];
+	//pts.children.forEach((child, ndx) => {
+        //const isLast = ndx ;
+	
+	for (var i=0; i<parCnt-1; i++) {
+        positionsO[currSegName].push(child[i].position.x);
+        positionsO[currSegName].push(child[i].position.y);
+        positionsO[currSegName].push(child[i].position.z);
+
+ 		//color.setHSL( i / parCnt, 1.0, 0.5 );
+		colors[currSegName].push( color.r, color.g, color.b );
+		//sizes.push( 0.2 );
+		sizes[currSegName].push( size );
+
+    	currPtrName = child[i].name.match('L([ABCDE]?)[0-9]{3}(.*?)[L|R]$');   //reg exp for extracting point name from object name: 
+    	nextPtrName = child[i+1].name.match('L([ABCDE]?)[0-9]{3}(.*?)[L|R]$');    
+        if( (nextPtrName[1] == currSegName) ){  // safe to assume there are at least two points
+            positionsN[currSegName].push(child[i+1].position.x);
+            positionsN[currSegName].push(child[i+1].position.y);
+            positionsN[currSegName].push(child[i+1].position.z);
+            
+            //currLnSegName = currPtrName[1];
+        } else { // next pt belongs to different segment; Finish this particle system .
+            positionsN[currSegName].push(child[i].position.x);   // there is now next one; so arbitrarily to itself.
+            positionsN[currSegName].push(child[i].position.y);
+            positionsN[currSegName].push(child[i].position.z);
+            drawParticles(lname, currSegName,  
+            		positionsO[currSegName],  
+            		positionsN[currSegName], 
+            		colors[currSegName], 
+            		sizes[currSegName]);	
+            
+            // empty them to be ready for a new segment
+        	currSegName = nextPtrName[1];
+            positionsO[currSegName] = [];  // 1st index for lineSegment' 2nd index for each point on the segment
+            positionsN[currSegName] = [];  // for simulating flow
+        	colors[currSegName] = [];
+        	sizes[currSegName] = [];
+        } 
+    }
+
+    // add the last point of the last segment, and finish the last segment
+    positionsO[currSegName].push(child[parCnt-1].position.x);   
+    positionsO[currSegName].push(child[parCnt-1].position.y);
+    positionsO[currSegName].push(child[parCnt-1].position.z);
+    positionsN[currSegName].push(child[parCnt-1].position.x);   
+    positionsN[currSegName].push(child[parCnt-1].position.y);
+    positionsN[currSegName].push(child[parCnt-1].position.z);
+	colors[currSegName].push( color.r, color.g, color.b );
+
+	//sizes.push( 0.2 );
+	sizes[currSegName].push( size );
+    drawParticles(lname, currSegName,  
+    		positionsO[currSegName],  
+    		positionsN[currSegName], 
+    		colors[currSegName], 
+    		sizes[currSegName]);	
+
+	function drawParticles(lName, sName, posO, posN, col, siz ){
+		let  uniforms = {    //moved outside of addParticles so it can be accessed later in updateParticles() 
+				texture: { value: new THREE.TextureLoader().load( "particle.png" ) },
+				del: 	 { type: "f", value: 0.9 }
+			};
+		let parMaterial = new THREE.ShaderMaterial( {
+			uniforms: uniforms,
+	 		//vertexShader: document.getElementById( 'pvshader' ).textContent,
+			//fragmentShader: document.getElementById( 'pfshader' ).textContent,
+	 		vertexShader: vertexShader(),
+			fragmentShader: fragmentShader(),
+	        blending: THREE.AdditiveBlending,
+	        //depthTest: false,   //?
+	        //depthWrite: false,  //?
+	        /*
+	        So first of all, what is depth test? Suppose if you are to draw 2 identical shapes directly in front of you but of different distance to you. In real life, you expect to only see the shape that is closer to you, correct?
+			Well if you were to try to do this without a depth test, you will only get the desired effect half the time: if the distant object is drawn before the closer object, no problem, same as real life; but if the closer object is drawn before the distance object, oh-oh, the distant object is visible when it should be not. Problematic.
+			Depth test is a tool built in today's GPUs to allow to get the desired draw output regardless of the order which the objects are drawn. 
+	        */
+	        //transparent: true,  // so it can show throug even if it is under the skin.
+	        vertexColors: true
+		} );
+
+		let parGeo = new THREE.BufferGeometry();
+	    parGeo.addAttribute( 'position', new THREE.Float32BufferAttribute( posO, 3 ) );
+	    parGeo.addAttribute( 'positionsN', new THREE.Float32BufferAttribute( posN, 3 ) );
+	    parGeo.addAttribute( 'color', new THREE.Float32BufferAttribute( col, 3 ) );
+	    parGeo.addAttribute( 'size', new THREE.Float32BufferAttribute( siz, 1 ).setDynamic( true ) );
+	    
+	    let parSys = new THREE.Points( parGeo, parMaterial );
+	    parSys.name='ptr'+sName+lName;
+	    parSys.position.set(pts.position.x,pts.position.y,pts.position.z);
+	    parSys.sortParticles = false;
+	    parSys.dynamic = true;
+	    ptrObjs.add(parSys);
+	}
+}    
+
+let del = 0;  // between each two points, interpolate 2 points to simulate flow. 
+			  // TODO: Should use GPU as well.
+function updateParticles(){ 
+/*	if (ptrObjs.children.length > 0) {
+	tt = ptrObjs.children[0].geometry.attributes["position"];
+	ptrObjs.children.forEach((child, ndx) => { 
+		for( var i = 0; i < child.geometry.vertices.length; i++ ){
+	        var ctlPtr = child.geometry.vertices[i];
+	        var path = ctlPtr.path;
+	        ctlPtr.lerpN += 0.01;
+	        if(ctlPtr.lerpN > 1){
+	        	ctlPtr.lerpN = 0;
+	        	ctlPtr.moveIndex = particle.nextIndex;
+	        	ctlPtr.nextIndex++;
+	            if( ctlPtr.nextIndex >= path.length ){
+	            	ctlPtr.moveIndex = 0;
+	            	ctlPtr.nextIndex = 1;
+	            }
+	        }
+	
+	        var currentPoint = path[ctlPtr.moveIndex];
+	        var nextPoint = path[ctlPtr.nextIndex];
+	
+	        ctlPtr.copy( currentPoint );
+	        ctlPtr.lerp( nextPoint, particle.lerpN );
+	    }
+		ctlPoints.geometry.verticesNeedUpdate = true; 
+	})
+	}
+*/
+	if (del==2){
+		del=0;
+	}else{
+		del=(del+1);
+	}
+	ptrObjs.children.forEach((child, ndx) => {
+		child.material.uniforms.del.value=del * 0.3;
+		child.needsUpdate = true;
+	})
+}    
+
+//********** on click event, retrieve information from DB.*********
+function getLineDetail(sec, val){
+	//alert("srcSetup: " + emID + ", " + val);
+    $.ajax({
+        type: "GET",
+        url: "/zyzySvc/jingluo/line/get/"+val,
+        data: "",
+     //   dataType: "text",
+     //   contentType: "application/text",
+        success: function(data) {
+        	//alert(data);
+        	if(data != null){
+    		json=JSON.parse(data);
+    		//$('#'+sec).text(data);
+    		//$('#'+sec).text(json[0].name);
+    		html="";
+    		json.forEach(function(val){
+    			html = html  
+    					+ "<div class='recHead'>"	+ val.name + "</div>"
+    				   	+ "<div class='recText'>"	+ val.description + "</div>"
+    				   	+ "<div class='recText'>"	+ val.applications + "</div>"
+    				   	+ "<div class='recText'>"	+ val.effect_time + "</div>";
+    		});
+    		$('#'+sec).html(html);
+        }
+        },
+		error : function(jqXHR, textStatus, errorThrown) {
+			//alert('error: ' + textStatus + errorThrown);
+			console.log('error: ' + textStatus + errorThrown);
+		}
+    });
+}
+
+function getPointDetail(sec, val){
+	//alert("srcSetup: " + emID + ", " + val);
+    $.ajax({
+        type: "GET",
+        url: "/zyzySvc/jingluo/point/get/"+val,
+        data: "",
+       // dataType: "text",
+       // contentType: "application/text",
+        success: function(data) {
+        	//alert(data);
+        	if(data != null){
+			//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
+    		//document.getElementById(sec+"Note").value = rslt;
+    		//$('#'+sec+'Note').html(data);
+    		//textContainer.clipboard.dangerouslyPasteHTML(data, 'api');
+    		json=JSON.parse(data);
+    		//$('#'+sec).text(data);
+    		//$('#'+sec).text(json[0].name);
+    		html="";
+    		json.forEach(function(val){
+    			html = html  
+    					+ "<div class='recHead'>"	+ val.name + "</div>"
+    				   	+ "<div class='recText'>"	+ val.name_explained + "</div>"
+    				   	+ "<div class='recText'>"	+ val.description + "</div>"
+    				   	+ "<div class='recText'>"	+ val.applications + "</div>";
+    		});
+    		$('#'+sec).html(html);
+        }
+        },
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		}
+    });
+} 
+
+//*********************************
+function vertexShader() {
+   return `
+	  uniform float del;
+		attribute float size;
+		attribute vec3 positionsN;
+		varying vec3 vColor;
+		void main() {
+			vColor = color;
+			vec4 mvPosition = modelViewMatrix * vec4( position * (1.0-del) +positionsN * del, 1.0);
+			gl_PointSize = size * ( 300.0 / -mvPosition.z );
+			gl_Position = projectionMatrix * mvPosition;
+	    }
+	`;
+}
+
+function fragmentShader() {
+	return `
+	    uniform sampler2D texture;
+		varying vec3 vColor;
+		void main() {
+			gl_FragColor = vec4( vColor, 1.0 );
+			gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+		}
+	`
+}
+
+</script>
+
+</body>
+</html>
