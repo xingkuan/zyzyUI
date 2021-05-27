@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>3D JL sys</title>
+</head>
+
+<link href = "../jquery/jquery-ui.css" rel = "stylesheet">
+   
+<script src='javascripts/three.min.js'></script>
+<script src='javascripts/OrbitControls.js'></script>
+<script src="javascripts/GLTFLoader.js"></script>
+<script src="javascripts/dat.gui.min.js"></script>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+
+<script src="../jquery/jquery-ui.js"></script>
+
+<style>
+
+html, body {
+        margin: 0;
+        height: 100%;
+    }
+
+#gui {
+position: absolute;  
+   top:0;left:0;
+   height: 20px;
+}
+#c {
+   margin-top: 0px;
+   width: 100%;  
+   height: 100%;
+   display: block;
+	/*position: absolute;  overlay layers?*/
+	left: 0; top: 0;
+}
+   
+#textDivL {
+	background-color: lightblue;
+    display: block;
+    float: left;
+}
+#textDivP {
+	background-color: lightblue;
+    display: block;
+    float: left;
+}
+
+.container {
+    width: 100%;
+    height: 100%;
+}
+.col1 {
+	float: left;
+	width: 60%;
+	height: 100%;
+}
+.col2 {
+	float: left;
+	width: 40%;
+}
+
+.recHead{
+	margin-top: 15px;
+	font-weight: bold;
+}
+.recText{
+	margin-top: 10px;
+	font-size: 80%;
+}
+
+
+/* containers for lables 
+   NOTE: I though "//" could be used for comments... and end up debuging for 
+   hours !!! as it is silently ignored */
+div#labels {
+  position: absolute;  /* let us position ourself inside the container */
+  left: 0;             /* make our position the top left of the container */
+  top: 0;
+  color: white;
+  z-index: 0;          /* make a new stacking context so children don't sort with rest of page */
+}
+/* for lable themselves */
+div#labels div {
+  position: absolute;  /* let us position them inside the container */
+  left: 0;             /* make their default position the top left of the container */
+  top: 0;
+  /*nogood flex: 0 0 auto; width: auto;*/ 
+  /*nogood display: inline-block; table; inline; fit-content; */  
+  /*nogood flex-wrap:nowrap;*/
+  /* background-color: #1e730a91; */
+   width: 30px;
+  cursor: pointer;     /* change the cursor to a hand when over us */
+  font-size: 10px;
+  user-select: none;   /* don't let the text get selected */
+  /*text-shadow:         .. create a black outline 
+    -1px -1px 0 #000,
+     0   -1px 0 #000,
+     1px -1px 0 #000,
+     1px  0   0 #000,
+     1px  1px 0 #000,
+     0    1px 0 #000,
+    -1px  1px 0 #000,
+    -1px  0   0 #000; */
+}
+div#labels div:hover {
+  color: red;
+}
+
+
+
+
+#debug {
+  position: absolute;
+  left: 1em;
+  top: 1em;
+  padding: 1em;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-family: monospace;
+}
+</style>
+
+
+<body>
+<div id="debug">
+<div id="mouseCoScreen"></div>
+<div id="renderRect"></div>
+<div id="mouseCoNorm"></div>
+<div id="cameraCo"></div>
+<div id="intersectObjs"></div>
+</div>
+
+
+<div id="editDialog" title="edit point" >
+<form id=f1>
+  <p>
+  <span id="editPtrCo" style="width:1000px"></span><br>
+  Line: <input list="dataLineList" id="uiLine" name="uiLine" />
+<datalist id="dataLineList"></datalist>
+<br>
+  Point: <input list="dataPtrList" id="uiPoint" name="uiPoint" />
+<datalist id="dataPtrList"></datalist>
+<br>
+expond:<textarea id="xpond" name="nameExpond" cols=40 rows=3 ></textarea>
+<br>
+apps:<textarea id="apps" name="apps" cols=40 rows=3 ></textarea>
+<br>
+desc:<textarea id="desc" name="desc" cols=40 rows=3 ></textarea>
+</form>
+</div>
+
+
+<div id="container" class="container">
+	<div class="col1">
+
+		<canvas id="c"></canvas>
+		 <div id="labels"></div>
+		<div id="gui"></div>
+	</div>
+	<div class="col2">
+		<div id="textDivL">Lines:<br>
+			<select id="jlList" name="jlList">     
+			<option style="font-weight: bold; color: red" value="" selected >select ...</option>
+			</select>
+		</div>
+		<br>
+		<div id="textDivP">test
+		</div>
+	</div>
+</div>
+
+
+<canvas id="dummyCanvas" width="64" height="64"></canvas>
+
+<script>
+/* global THREE */
+var modelObj, root;
+
+// JL objects group. Jingluo and Xuwei are added to this group.
+var jlObjs = new THREE.Object3D(); 
+
+
+//particle systems for simulating flow.
+var ptrObjs = new THREE.Object3D();  
+
+//used in raycast
+var interceptMark;   
+
+var camera, scene, renderer, controls; 
+
+const canvas = document.querySelector('#c');
+
+
+//////
+function popup(){
+$( "#editDialog" ).dialog({
+autoOpen: false,
+modal: true,
+//position:pos,
+ buttons: {
+     "Close ": function() {
+    	 $("#container").attr('disabled','auto');
+	      $(this).dialog( "close" );
+      },
+     "Submit ": function(){
+	     $('#msg').html($("#f1").serialize());
+	     $("#container").attr('disabled','auto');		
+	     $( this ).dialog( "close" );
+     }
+   }
+});
+};
+
+$("#uiLine").blur(function(){
+	//alert($(this).val());
+	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
+		e=>{$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));});
+});
+
+$("#uiPoint").blur(function(){
+	//alert($(this).val());
+	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#uiLine").val() +"/"+$(this).val(), 
+		e=>{$("#xpond").text(e["name_explained"]);
+			$("#apps").text(e["applications"]);
+			$("#desc").text(e["description"]);
+		});
+});
+
+/////////
+populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List;
+		function(e){$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));});  
+popup()  ;
+  
+init();
+loadGLTF('as_fem2.glb');
+requestAnimationFrame(render);  // this way, "time" can be passed to render()
+
+//********************************************************
+function init() {
+  renderer = new THREE.WebGLRenderer({canvas: canvas});
+
+  const fov = 45;
+  const aspect = 2;  // the canvas default
+  const near = 30;
+  const far = 50;
+  camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.set(0, 10, 20);
+  camera.zoom = 0.5;
+  //camera.updateProjectionMatrix();
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color('black');
+
+  //setup lignts
+  {
+    const skyColor = 0xB1E1FF;  // light blue
+    const groundColor = 0xB97A20;  // brownish orange
+    const intensity = 1;
+    const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+    scene.add(light);
+  }
+
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(5, 10, 2);
+    scene.add(light);
+    scene.add(light.target);
+  }
+
+  // setup camera control
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.set(0, 5, 0);
+  controls.update();
+
+  // the ground
+  const planeSize = 40;
+  const loader = new THREE.TextureLoader();
+  const texture = loader.load('checker.png');
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.magFilter = THREE.NearestFilter;
+  const repeats = planeSize / 2;
+  texture.repeat.set(repeats, repeats);
+
+  const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+  const planeMat = new THREE.MeshPhongMaterial({
+    map: texture,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(planeGeo, planeMat);
+  mesh.rotation.x = Math.PI * -.5;
+  scene.add(mesh);
+  
+  scene.add(jlObjs);
+  scene.add(ptrObjs);
+
+  //testing transparency
+  /*{
+  var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+  var material = new THREE.MeshBasicMaterial( { 
+	  color: 0x00ff00,
+	   opacity: 0.8,
+	   side: THREE.SingleSide,
+	   //depthWrite: false,   // [2019.04.13] Don't understand it. But 
+	   //depthTest: false,    // it seems make it a ghost that can go through ...
+	   transparent: false,
+	  } );
+  var cube = new THREE.Mesh( geometry, material );
+  cube.position.set(1,3,0);
+  scene.add( cube ); 
+  }*/
+  
+  //mark a spot on selection (raycaster interception)
+  var geometry = new THREE.SphereBufferGeometry( 0.02 );
+  var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+  interceptMark = new THREE.Mesh( geometry, material );
+    interceptMark.visible = false;
+    scene.add( interceptMark );
+
+  // setup raycaster for interacting with interested object.
+  // ... raycaster and 2D mouse events
+  {
+    raycaster = new THREE.Raycaster();
+	
+	raycaster.linePrecision = 0.03;  //two big value can cause "lines" always in the raycaster intersection.
+	raycaster.params.Points.threshold = 0.03;
+	mouse = new THREE.Vector2();
+	//mouse = new THREE.Vector3();
+
+
+	//document.addEventListener( 'click', onMouseDown, false );
+	$("#c").on( 'click', onMouseDown);   //response to click only if it is inside the 3D view div
+	//2021.05.21 seems make no sense !  document.addEventListener( 'touchstart', onDocumentTouchStart, false );   //for touch screen devices
+	
+	function onMouseDown( e ) {
+		e.preventDefault();
+		// (left, top) = (-1,-1), (right, top) = (1, -1)
+		//           (middle, middle) = (0,0)
+		// (left, bottom) = (-1,1), (right, top) = (1, 1)
+//2021.05.22 Try and TODO
+$("#mouseCoScreen").html("mouse(screen):"+e.clientX+","+e.clientY);	
+		var rect = renderer.domElement.getBoundingClientRect();
+$("#renderRect").html("rect:"+rect.left+","+rect.top+","+rect.right+","+rect.bottom);	
+		mouse.x = ( ( e.clientX - rect.left ) / ( rect.width - rect.left ) ) * 2 - 1;
+		mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
+$("#mouseCoNorm").html("mouse(rect):"+mouse.y+","+mouse.y);	
+		// ??? [2019.04.23] how about z? no effect !?  
+		//mouse.z = camera.position.z; 
+		//mouse.z = 0.5;
+	    //   mouse.unproject( camera );   
+	    //   mouse.normalize();
+$("#cameraCo").html("camera:"+camera.position.x+','+camera.position.y+','+camera.position.z);	        
+		raycaster.setFromCamera(mouse,camera);
+	
+		var intersects = raycaster.intersectObjects(jlObjs.children, true);
+		
+		console.log("intersected " + intersects.length);
+		
+		//intersects.forEach((child, ndx) => {  //Respond to the first only. Otherwise, 
+		//									  //the "line" seems will have a lot ...
+var intersectObjs="objs:<br>";
+$("#intersectObjs").html(intersectObjs);
+		if(intersects.length > 0){ 
+			child = intersects[0];		
+			var rawName = child.object.name;
+			console.log("... " + rawName);
+intersectObjs=intersectObjs+rawName+":("+child.point.x+","+child.point.y+","+child.point.z+")";
+$("#intersectObjs").html(intersectObjs);
+$("#container").attr('disabled','disabled');
+$("#editPtrCo").text("("+child.point.x+","+child.point.y+","+child.point.z+")")
+$("#editDialog").dialog( "open" );
+tryAddObj("Try", child.point);
+
+			if (rawName.startsWith("JL")) {  // JL related objects
+				interceptMark.visible = true;
+				interceptMark.position.copy( intersects[ 0 ].point );
+							
+				var ptrName = rawName.match('[0-9]{3}(.*?)[L|R]$');
+				//$('#textDiv').text(child.object.name);
+				if (ptrName == null){   // it is a line
+					console.log("raw name: ", rawName);
+					jlname = rawName.substring(2,);
+					//2019.04.12: exclude the last charactor, which represent segment of the line.
+					// TODO: better way for this?
+					getLineDetail("textDivL", jlname.substr(0, jlname.length-1));
+					//getLineDetail("textDivL", "手厥阴心包经");
+				}else if (ptrName.length == 2){    // it is a point
+					getPointDetail("textDivP", ptrName[1]);
+				}
+			}else{
+				//interceptMark.visible = false;
+			}
+		}
+		//}); //forEach
+	}	
+	
+	function onDocumentTouchStart( e ) {
+		/* 2021.05.21 make no sense ?!
+		e.preventDefault();
+		e.clientX = e.touches[0].clinetX;
+		e.clientY = e.touches[0].clinetY;  */
+		onMouseDown(e);
+	}
+	//// object picking  
+
+
+  }
+
+  
+}
+//2021.05.23 
+function tryAddObj(sName, ptPos){
+	//console.log("point co:", ptPos);
+	var ptSph;
+	{  // the point spot
+		ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
+		ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
+		ptSph = new THREE.Mesh( ptGeo, ptMat );
+		ptSph.position.set(ptPos.x, ptPos.y, ptPos.z);
+		// ...
+		ptSph.name = sName; 
+		scene.add( ptSph );   // to be displayed as 3D obj
+		jlObjs.add(ptSph);  // If moved before scene.add(), the added will disarear when exit this closure ?
+	}
+}
+
+
+function loadGLTF(gltfName){
+    const gltfLoader = new THREE.GLTFLoader();
+    gltfLoader.load(gltfName, (gltf) => {
+      root = gltf.scene;
+      console.log(root.name);
+      scene.add(root);
+
+      console.log(dumpObject(root).join('\n'));
+      //console.log(dumpObject(scene).join('\n'));
+
+      modelObj = scene.getObjectByName("asian_female_teen", true);
+//2021.05.22 DEVEL: so user can interactively contribute ...
+jlObjs.add(modelObj);
+      
+      initCtrl();
+	  // compute the box that contains all the stuff
+	  // from root and below
+	  const box = new THREE.Box3().setFromObject(root);
+	
+	  const boxSize = box.getSize(new THREE.Vector3()).length();
+	  const boxCenter = box.getCenter(new THREE.Vector3());
+	
+	  // set the camera to frame the box
+	  frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
+
+	  // update the Trackball controls to handle the new size
+      controls.maxDistance = boxSize * 10;
+	  controls.target.copy(boxCenter);
+	  controls.update();
+    });
+}
+
+
+//test controls
+function initCtrl(){
+	//const gui = new dat.GUI;
+	const gui = new dat.GUI({ autoPlace: false });
+	//gui.domElement.id = 'gui';
+	document.getElementById('gui').appendChild(gui.domElement);
+	gui.close();
+	const folder = gui.addFolder("Test");
+	folder.open();
+	//test.add(obj.scale, 'x', 0,3).name("X").listen();
+	var leftArm = scene.getObjectByName( "Teen_rig_forearmL", true);
+	//var leftArm = scene.getObjectByName( "Teen_rig_IK_armL", true);
+	//var leftArm = scene.getObjectByName( "Teen_rig_chest", true);
+	folder.add(leftArm.rotation, 'x', 0,3).name("X").listen();
+}
+
+function dumpVec3(v3, precision = 3) {
+	return `${v3.x.toFixed(precision)}, ${v3.y.toFixed(precision)}, ${v3.z.toFixed(precision)}`;
+}
+  
+function dumpObject(obj, lines = [], isLast = true, prefix = '') {
+    const localPrefix = isLast ? '└─' : '├─';
+	lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
+
+	const dataPrefix = obj.children.length
+	     ? (isLast ? '  │ ' : '│ │ ')
+	     : (isLast ? '    ' : '│   ');
+	lines.push(`${prefix}${dataPrefix}  pos: ${dumpVec3(obj.position)}`);
+	lines.push(`${prefix}${dataPrefix}  rot: ${dumpVec3(obj.rotation)}`);
+	lines.push(`${prefix}${dataPrefix}  scl: ${dumpVec3(obj.scale)}`);
+	  
+	const newPrefix = prefix + (isLast ? '  ' : '│ ');
+	const lastNdx = obj.children.length - 1;
+	obj.children.forEach((child, ndx) => {
+	    const isLast = ndx === lastNdx;
+	    dumpObject(child, lines, isLast, newPrefix);
+	});
+	return lines;
+}
+
+function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
+    const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
+    const halfFovY = THREE.Math.degToRad(camera.fov * .5);
+    const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
+    // compute a unit vector that points in the direction the camera is now
+    // in the xz plane from the center of the box
+    const direction = (new THREE.Vector3())
+        .subVectors(camera.position, boxCenter)
+        .multiply(new THREE.Vector3(1, 0, 1))
+        .normalize();
+
+    // move the camera to a position distance units way from the center
+    // in whatever direction the camera was from the center already
+    camera.position.copy(direction.multiplyScalar(distance).add(boxCenter));
+
+    // pick some near and far values for the frustum that
+    // will contain the box.
+    camera.near = boxSize / 100;
+    camera.far = boxSize * 100;
+
+    camera.updateProjectionMatrix();
+
+    // point the camera to look at the center of the box
+    camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
+}
+
+//var flowTexture;   //needed global var so it can be accessed from within render()  
+
+function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+}
+
+var lastRefresh=0;
+function render(time) {
+	//console.log(time/1000);
+    controls.update();
+    
+   if (resizeRendererToDisplaySize(renderer)) {
+       const canvas = renderer.domElement;
+       camera.aspect = canvas.clientWidth / canvas.clientHeight;
+       camera.updateProjectionMatrix();
+    }	
+
+    renderer.render(scene, camera);
+    //updateScreenPosition();  //will see if it is needed.
+    
+    requestAnimationFrame(render);
+}
+
+
+let del = 0;  // between each two points, interpolate 2 points to simulate flow. 
+			  // TODO: Should use GPU as well.
+function updateParticles(){ 
+	if (del==2){
+		del=0;
+	}else{
+		del=(del+1);
+	}
+	ptrObjs.children.forEach((child, ndx) => {
+		child.material.uniforms.del.value=del * 0.3;
+		child.needsUpdate = true;
+	})
+}    
+
+//********** on click event, retrieve information from DB.*********
+function getPointsOf(jl){
+	url='http://localhost:8080/zyzySvc/JL/getPointByID/400002';
+	//alert("srcSetup: " + emID + ", " + val);
+    $.ajax({
+        type: "GET",
+        url: url,
+        data: "",
+       // dataType: "text",
+       // contentType: "application/text",
+        success: function(data) {
+        	//alert(data);
+        	if(data != null){
+			//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
+    		//document.getElementById(sec+"Note").value = rslt;
+    		//$('#'+sec+'Note').html(data);
+    		//textContainer.clipboard.dangerouslyPasteHTML(data, 'api');
+    		json=JSON.parse(data);
+    		//$('#'+sec).text(data);
+    		//$('#'+sec).text(json[0].name);
+    		html="";
+    		json.forEach(function(val){
+    			html = html  
+    					+ "<div class='recHead'>"	+ val.name + "</div>"
+    				   	+ "<div class='recText'>"	+ val.name_explained + "</div>"
+    				   	+ "<div class='recText'>"	+ val.description + "</div>"
+    				   	+ "<div class='recText'>"	+ val.applications + "</div>";
+    		});
+    		$('#'+sec).html(html);
+        }
+        },
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		}
+    });
+} 
+
+function populateField(url, fn){
+	//url='http://localhost:8080/zyzySvc/JL/getJLs';
+	//alert("srcSetup: " + emID + ", " + val);
+    $.ajax({
+        type: "GET",
+        url: url,
+        data: "",
+        success: function(data) {
+        	console.log(data);
+        	if(data != null){
+    		//json=JSON.parse(data);
+    		//json.forEach(function(val){
+    		data.forEach(e => fn(e));
+        }
+        },
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		}
+    });
+} 
+    
+</script>
+
+
+</body>
+</html>
