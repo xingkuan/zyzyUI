@@ -137,7 +137,7 @@ div#labels div:hover {
 <div id="editDialog" title="edit point" >
 <form id=f1>
   <p>
-  <span id="editPtrCo" style="width:1000px"></span><br>
+  <span id="ptrX"></span>,<span id="ptrY"></span><span id="ptrZ"></span><br>
   Line: <input list="dataLineList" id="uiLine" name="uiLine" />
 <datalist id="dataLineList"></datalist>
 <br>
@@ -202,11 +202,12 @@ modal: true,
 //position:pos,
  buttons: {
      "Close ": function() {
-    	 $("#container").attr('disabled','auto');
 	      $(this).dialog( "close" );
       },
      "Submit ": function(){
-	     $('#msg').html($("#f1").serialize());
+	     console.log($("#uiLine").val()+","+$("#uiPoint").val());
+	     savePoint(composeData);
+	     //re-enable 3D object event handler.
 	     $("#container").attr('disabled','auto');		
 	     $( this ).dialog( "close" );
      }
@@ -371,7 +372,9 @@ $("#intersectObjs").html(intersectObjs);
 intersectObjs=intersectObjs+rawName+":("+child.point.x+","+child.point.y+","+child.point.z+")";
 $("#intersectObjs").html(intersectObjs);
 $("#container").attr('disabled','disabled');
-$("#editPtrCo").text("("+child.point.x+","+child.point.y+","+child.point.z+")")
+$("#ptrX").text(child.point.x);
+$("#ptrY").text(child.point.y);
+$("#ptrZ").text(child.point.z);
 $("#editDialog").dialog( "open" );
 tryAddObj("Try", child.point);
 
@@ -630,7 +633,57 @@ function populateField(url, fn){
 		}
     });
 } 
+
+function savePoint(fn) {
+		url="http://localhost:8080/zyzySvc/JL/updatePoint";
+	$.ajax({
+		type : 'POST',
+		async: false,
+		url : url,
+		//contentType: 'application/json',
+		contentType : 'application/text',
+		//contentType: 'text/plain',
+		//dataType: "json",
+		dataType : "text",
+		//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
+		data : fn(),
+		success : function(data, textStatus, jqXHR) {
+			//$('#srcContent').val('note created successfully');
+			//alert('... here');
+            //window.location = window.location.href;
+            //loadPage(srcId, srcSeq);
+            //location.reload();
+            //window.location = thisUrl;
+		},
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		}
+	})
+}
     
+function composeData() {
+	/*    return JSON.stringify({
+	 "cat": $('input[name="cat"]:checked').val(),
+	 "data": $('#txtNote').val()
+	 })
+	 */
+	//alert($('#selRelation option:selected').val());
+	var strRslt, rsltObj;
+	rsltObj = {
+		line_name:	$('#uiLine').val(),
+		name:	$('#uiPoint').val(),
+		x:	$('#ptrX').text(),
+		y:	$('#ptrY').text(),
+		z:	$('#ptrZ').text()
+		
+	};
+	
+	//alert(typeof rsltObj );
+	let json= JSON.stringify(rsltObj)
+
+	//return strRslt;
+	return json;
+}    
 </script>
 
 
