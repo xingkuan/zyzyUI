@@ -1,0 +1,95 @@
+
+html, body {
+        margin: 0;
+        height: 100%;
+    }
+
+#modelCtrl {
+position: absolute;  
+   top:0;left:0;
+   height: 20px;
+}
+#c {
+   margin-top: 0px;
+   width: 100%;  
+   height: 100%;
+   display: block;
+	/*position: absolute;  overlay layers?*/
+	left: 0; top: 0;
+}
+   
+#textDivL {
+	background-color: lightblue;
+    display: block;
+    float: left;
+}
+#textDivP {
+	background-color: lightblue;
+    display: block;
+    float: left;
+}
+
+.container {
+    width: 100%;
+    height: 100%;
+}
+
+.recHead{
+	margin-top: 15px;
+	font-weight: bold;
+}
+.recText{
+	margin-top: 10px;
+	font-size: 80%;
+}
+
+
+/* containers for lables 
+   NOTE: I though "//" could be used for comments... and end up debuging for 
+   hours !!! as it is silently ignored */
+div#labels {
+  position: absolute;  /* let us position ourself inside the container */
+  left: 0;             /* make our position the top left of the container */
+  top: 0;
+  color: white;
+  z-index: 0;          /* make a new stacking context so children don't sort with rest of page */
+}
+/* for lable themselves */
+div#labels div {
+  position: absolute;  /* let us position them inside the container */
+  left: 0;             /* make their default position the top left of the container */
+  top: 0;
+  /*nogood flex: 0 0 auto; width: auto;*/ 
+  /*nogood display: inline-block; table; inline; fit-content; */  
+  /*nogood flex-wrap:nowrap;*/
+  /* background-color: #1e730a91; */
+   width: 30px;
+  cursor: pointer;     /* change the cursor to a hand when over us */
+  font-size: 10px;
+  user-select: none;   /* don't let the text get selected */
+  /*text-shadow:         .. create a black outline 
+    -1px -1px 0 #000,
+     0   -1px 0 #000,
+     1px -1px 0 #000,
+     1px  0   0 #000,
+     1px  1px 0 #000,
+     0    1px 0 #000,
+    -1px  1px 0 #000,
+    -1px  0   0 #000; */
+}
+div#labels div:hover {
+  color: red;
+}
+
+
+
+
+#debug {
+  position: absolute;
+  left: 1em;
+  top: 1em;
+  padding: 1em;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-family: monospace;
+}

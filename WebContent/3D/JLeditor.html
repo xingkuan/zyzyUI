@@ -6,6 +6,9 @@
 </head>
 
 <link href = "../jquery/jquery-ui.css" rel = "stylesheet">
+
+<link href = "JLeditor.css" rel = "stylesheet">
+<script src='JLeditor.js'></script>
    
 <script src='javascripts/three.min.js'></script>
 <script src='javascripts/OrbitControls.js'></script>
@@ -18,160 +21,46 @@
 
 <style>
 
-html, body {
-        margin: 0;
-        height: 100%;
-    }
-
-#gui {
-position: absolute;  
-   top:0;left:0;
-   height: 20px;
-}
-#c {
-   margin-top: 0px;
-   width: 100%;  
-   height: 100%;
-   display: block;
-	/*position: absolute;  overlay layers?*/
-	left: 0; top: 0;
-}
-   
-#textDivL {
-	background-color: lightblue;
-    display: block;
-    float: left;
-}
-#textDivP {
-	background-color: lightblue;
-    display: block;
-    float: left;
-}
-
-.container {
-    width: 100%;
-    height: 100%;
-}
-.col1 {
-	float: left;
-	width: 60%;
-	height: 100%;
-}
-.col2 {
-	float: left;
-	width: 40%;
-}
-
-.recHead{
-	margin-top: 15px;
-	font-weight: bold;
-}
-.recText{
-	margin-top: 10px;
-	font-size: 80%;
-}
-
-
-/* containers for lables 
-   NOTE: I though "//" could be used for comments... and end up debuging for 
-   hours !!! as it is silently ignored */
-div#labels {
-  position: absolute;  /* let us position ourself inside the container */
-  left: 0;             /* make our position the top left of the container */
-  top: 0;
-  color: white;
-  z-index: 0;          /* make a new stacking context so children don't sort with rest of page */
-}
-/* for lable themselves */
-div#labels div {
-  position: absolute;  /* let us position them inside the container */
-  left: 0;             /* make their default position the top left of the container */
-  top: 0;
-  /*nogood flex: 0 0 auto; width: auto;*/ 
-  /*nogood display: inline-block; table; inline; fit-content; */  
-  /*nogood flex-wrap:nowrap;*/
-  /* background-color: #1e730a91; */
-   width: 30px;
-  cursor: pointer;     /* change the cursor to a hand when over us */
-  font-size: 10px;
-  user-select: none;   /* don't let the text get selected */
-  /*text-shadow:         .. create a black outline 
-    -1px -1px 0 #000,
-     0   -1px 0 #000,
-     1px -1px 0 #000,
-     1px  0   0 #000,
-     1px  1px 0 #000,
-     0    1px 0 #000,
-    -1px  1px 0 #000,
-    -1px  0   0 #000; */
-}
-div#labels div:hover {
-  color: red;
-}
-
-
-
-
-#debug {
-  position: absolute;
-  left: 1em;
-  top: 1em;
-  padding: 1em;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-family: monospace;
-}
 </style>
 
 
 <body>
+<!-- for prototyping -->
 <div id="debug">
-<div id="mouseCoScreen"></div>
-<div id="renderRect"></div>
-<div id="mouseCoNorm"></div>
-<div id="cameraCo"></div>
-<div id="intersectObjs"></div>
+  <div id="mouseCoScreen"></div>
+  <div id="renderRect"></div>
+  <div id="mouseCoNorm"></div>
+  <div id="cameraCo"></div>
+  <div id="intersectObjs"></div>
 </div>
 
-
+<!-- pop up form -->
 <div id="editDialog" title="edit point" >
 <form id=f1>
   <p>
   <span id="ptrX"></span>,<span id="ptrY"></span><span id="ptrZ"></span><br>
-  Line: <input list="dataLineList" id="uiLine" name="uiLine" />
-<datalist id="dataLineList"></datalist>
-<br>
+    Line: <input list="dataLineList" id="uiLine" name="uiLine" />
+	<datalist id="dataLineList"></datalist>
+  <br>
   Point: <input list="dataPtrList" id="uiPoint" name="uiPoint" />
-<datalist id="dataPtrList"></datalist>
-<br>
-expond:<textarea id="xpond" name="nameExpond" cols=40 rows=3 ></textarea>
-<br>
-apps:<textarea id="apps" name="apps" cols=40 rows=3 ></textarea>
-<br>
-desc:<textarea id="desc" name="desc" cols=40 rows=3 ></textarea>
+	<datalist id="dataPtrList"></datalist>
+  <br>
+  Seq: <input type="number" id="uiSeq" name="uiSeq" />
+  <br>
+  expond:<textarea id="xpond" name="nameExpond" cols=40 rows=3 ></textarea>
+  <br>
+  apps:<textarea id="apps" name="apps" cols=40 rows=3 ></textarea>
+  <br>
+  desc:<textarea id="desc" name="desc" cols=40 rows=3 ></textarea>
 </form>
 </div>
 
 
 <div id="container" class="container">
-	<div class="col1">
-
-		<canvas id="c"></canvas>
-		 <div id="labels"></div>
-		<div id="gui"></div>
-	</div>
-	<div class="col2">
-		<div id="textDivL">Lines:<br>
-			<select id="jlList" name="jlList">     
-			<option style="font-weight: bold; color: red" value="" selected >select ...</option>
-			</select>
-		</div>
-		<br>
-		<div id="textDivP">test
-		</div>
-	</div>
+	<canvas id="c"></canvas>
+    <div id="labels"></div>
+	<div id="modelCtrl"></div>
 </div>
-
 
 <canvas id="dummyCanvas" width="64" height="64"></canvas>
 
@@ -179,9 +68,8 @@ desc:<textarea id="desc" name="desc" cols=40 rows=3 ></textarea>
 /* global THREE */
 var modelObj, root;
 
-// JL objects group. Jingluo and Xuwei are added to this group.
+// JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
-
 
 //particle systems for simulating flow.
 var ptrObjs = new THREE.Object3D();  
@@ -189,58 +77,65 @@ var ptrObjs = new THREE.Object3D();
 //used in raycast
 var interceptMark;   
 
-var camera, scene, renderer, controls; 
+var camera, scene, renderer, CameraCtrl; 
 
 const canvas = document.querySelector('#c');
 
+setupPopup()  ;
+init3D();
+loadGLTF('as_fem2.glb');
+//initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
+requestAnimationFrame(render);  // this way, "time" can be passed to render()
 
-//////
-function popup(){
+//********************************************************
+////// set up the pop up for entering infomations.
+function setupPopup(){
 $( "#editDialog" ).dialog({
-autoOpen: false,
-modal: true,
-//position:pos,
- buttons: {
-     "Close ": function() {
-	      $(this).dialog( "close" );
-      },
-     "Submit ": function(){
-	     console.log($("#uiLine").val()+","+$("#uiPoint").val());
-	     savePoint(composeData);
-	     //re-enable 3D object event handler.
-	     $("#container").attr('disabled','auto');		
-	     $( this ).dialog( "close" );
-     }
-   }
+	autoOpen: false,
+	modal: true,
+	//position:pos,
+ 	buttons: {
+    	 "Close ": function() {
+	    	$(this).dialog( "close" );
+      	},
+     	"Submit ": function(){
+	  		//console.log($("#uiLine").val()+","+$("#uiPoint").val());
+	     	savePoint(composeData);
+	   		//re-enable 3D object event handler.
+	     	$("#container").attr('disabled','auto');		
+			$( this ).dialog( "close" );
+			//clear input fields
+			$('#uiLine').text("");
+			$('#uiPoint').text("");
+			$('#uiSeq').text("");
+     	}
+	}
 });
-};
-
+//event hanler
 $("#uiLine").blur(function(){
 	//alert($(this).val());
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
 		e=>{$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));});
 });
-
+//event hanler
 $("#uiPoint").blur(function(){
 	//alert($(this).val());
 	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#uiLine").val() +"/"+$(this).val(), 
-		e=>{$("#xpond").text(e["name_explained"]);
+		e=>{$("#uiSeq").val(e["seq"]);
+			$("#xpond").text(e["name_explained"]);
 			$("#apps").text(e["applications"]);
 			$("#desc").text(e["description"]);
 		});
 });
 
-/////////
 populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List;
-		function(e){$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));});  
-popup()  ;
-  
-init();
-loadGLTF('as_fem2.glb');
-requestAnimationFrame(render);  // this way, "time" can be passed to render()
+		function(e){
+			$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
+		});  
+};  //end setupPopup()
 
-//********************************************************
-function init() {
+////////////////////
+function init3D() {
   renderer = new THREE.WebGLRenderer({canvas: canvas});
 
   const fov = 45;
@@ -262,7 +157,6 @@ function init() {
     const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
     scene.add(light);
   }
-
   {
     const color = 0xFFFFFF;
     const intensity = 1;
@@ -273,29 +167,41 @@ function init() {
   }
 
   // setup camera control
-  controls = new THREE.OrbitControls(camera, canvas);
-  controls.target.set(0, 5, 0);
-  controls.update();
-
+  {
+	  CameraCtrl = new THREE.OrbitControls(camera, canvas);
+	  CameraCtrl.target.set(0, 5, 0);
+	  //trying ...
+	  CameraCtrl.enableRotate = true;
+	  CameraCtrl.enableZoom = true;
+	  CameraCtrl.enablePan = false;
+	  CameraCtrl.enableKeys = true;
+	  //CameraCtrl.minPolarAngle = Math.PI/2;
+	  //CameraCtrl.maxPolarAngle = Math.PI/2; //Math.PI;
+	  // left and right rotation range
+	  CameraCtrl.minAzimuthAngle = -Math.PI * (100 / 180);
+	  CameraCtrl.maxAzimuthAngle = Math.PI * (100 / 180);
+	  CameraCtrl.update();
+  }
   // the ground
-  const planeSize = 40;
-  const loader = new THREE.TextureLoader();
-  const texture = loader.load('checker.png');
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.magFilter = THREE.NearestFilter;
-  const repeats = planeSize / 2;
-  texture.repeat.set(repeats, repeats);
-
-  const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
-  const planeMat = new THREE.MeshPhongMaterial({
-    map: texture,
-    side: THREE.DoubleSide,
-  });
-  const mesh = new THREE.Mesh(planeGeo, planeMat);
-  mesh.rotation.x = Math.PI * -.5;
-  scene.add(mesh);
-  
+  {
+	  const planeSize = 40;
+	  const loader = new THREE.TextureLoader();
+	  const texture = loader.load('checker.png');
+	  texture.wrapS = THREE.RepeatWrapping;
+	  texture.wrapT = THREE.RepeatWrapping;
+	  texture.magFilter = THREE.NearestFilter;
+	  const repeats = planeSize / 2;
+	  texture.repeat.set(repeats, repeats);
+	
+	  const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+	  const planeMat = new THREE.MeshPhongMaterial({
+	    map: texture,
+	    side: THREE.DoubleSide,
+	  });
+	  const mesh = new THREE.Mesh(planeGeo, planeMat);
+	  mesh.rotation.x = Math.PI * -.5;
+	  scene.add(mesh);
+  }
   scene.add(jlObjs);
   scene.add(ptrObjs);
 
@@ -334,7 +240,23 @@ function init() {
 
 
 	//document.addEventListener( 'click', onMouseDown, false );
-	$("#c").on( 'click', onMouseDown);   //response to click only if it is inside the 3D view div
+	//$("#c").on( 'click', onMouseDown);  This one works!  //response to click only if it is inside the 3D view div
+	$("#c").mousedown(e=>{    //Try. Because I need use roght mouse down event as well.
+		switch (e.which){
+			case 1: 
+				onMouseDown(e);
+				break;
+			case 2:
+				alert('middle button');
+				onRightMouseDown(e);
+				break;
+			case 3:
+				onRightMouseDown(e);
+				break;
+			default:
+				alert("a strange mouse event");
+		}
+	});
 	//2021.05.21 seems make no sense !  document.addEventListener( 'touchstart', onDocumentTouchStart, false );   //for touch screen devices
 	
 	function onMouseDown( e ) {
@@ -376,31 +298,38 @@ $("#ptrX").text(child.point.x);
 $("#ptrY").text(child.point.y);
 $("#ptrZ").text(child.point.z);
 $("#editDialog").dialog( "open" );
-tryAddObj("Try", child.point);
+addPoint("Try", child.point);
 
-			if (rawName.startsWith("JL")) {  // JL related objects
-				interceptMark.visible = true;
-				interceptMark.position.copy( intersects[ 0 ].point );
-							
-				var ptrName = rawName.match('[0-9]{3}(.*?)[L|R]$');
-				//$('#textDiv').text(child.object.name);
-				if (ptrName == null){   // it is a line
-					console.log("raw name: ", rawName);
-					jlname = rawName.substring(2,);
-					//2019.04.12: exclude the last charactor, which represent segment of the line.
-					// TODO: better way for this?
-					getLineDetail("textDivL", jlname.substr(0, jlname.length-1));
-					//getLineDetail("textDivL", "手厥阴心包经");
-				}else if (ptrName.length == 2){    // it is a point
-					getPointDetail("textDivP", ptrName[1]);
-				}
-			}else{
-				//interceptMark.visible = false;
-			}
 		}
-		//}); //forEach
 	}	
+
 	
+	function onRightMouseDown( e ) {
+		e.preventDefault();
+
+		var rect = renderer.domElement.getBoundingClientRect();
+
+		mouse.x = ( ( e.clientX - rect.left ) / ( rect.width - rect.left ) ) * 2 - 1;
+		mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
+
+		raycaster.setFromCamera(mouse,camera);
+	
+		var intersects = raycaster.intersectObjects(jlObjs.children, true);
+		
+		console.log("intersected " + intersects.length);
+		
+		if(intersects.length > 0){ 
+			child = intersects[0];		
+			var rawName = child.object.name;
+			console.log("... " + rawName);
+intersectObjs=intersectObjs+rawName+":("+child.point.x+","+child.point.y+","+child.point.z+")";
+//camera.lookAt(new THREE.Vector3(child.point.x,child.point.y,child.point.z));
+//camera.lookAt(new THREE.Vector3(10,10,10));
+CameraCtrl.target.set(0, 0, 0);
+CameraCtrl.target.set(child.point.x,child.point.y,child.point.z);
+CameraCtrl.update();
+		}
+	}
 	function onDocumentTouchStart( e ) {
 		/* 2021.05.21 make no sense ?!
 		e.preventDefault();
@@ -409,14 +338,10 @@ tryAddObj("Try", child.point);
 		onMouseDown(e);
 	}
 	//// object picking  
-
-
   }
-
-  
 }
 //2021.05.23 
-function tryAddObj(sName, ptPos){
+function addPoint(sName, ptPos){
 	//console.log("point co:", ptPos);
 	var ptSph;
 	{  // the point spot
@@ -426,9 +351,9 @@ function tryAddObj(sName, ptPos){
 		ptSph.position.set(ptPos.x, ptPos.y, ptPos.z);
 		// ...
 		ptSph.name = sName; 
-		scene.add( ptSph );   // to be displayed as 3D obj
-		jlObjs.add(ptSph);  // If moved before scene.add(), the added will disarear when exit this closure ?
 	}
+	scene.add( ptSph );   // to be displayed as 3D obj
+	jlObjs.add(ptSph);  // If moved before scene.add(), the added will disarear when exit this closure ?
 }
 
 
@@ -443,10 +368,10 @@ function loadGLTF(gltfName){
       //console.log(dumpObject(scene).join('\n'));
 
       modelObj = scene.getObjectByName("asian_female_teen", true);
-//2021.05.22 DEVEL: so user can interactively contribute ...
+//2021.05.22 DEVEL: so users can interactively contribute ... 
+//Originally, it is not added to jlObjs because these functions are performed in Blender.
 jlObjs.add(modelObj);
       
-      initCtrl();
 	  // compute the box that contains all the stuff
 	  // from root and below
 	  const box = new THREE.Box3().setFromObject(root);
@@ -457,22 +382,23 @@ jlObjs.add(modelObj);
 	  // set the camera to frame the box
 	  frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
 
+      initModelCtrl();   //leave it here for now, because I don't know how to synchronously load model
 	  // update the Trackball controls to handle the new size
-      controls.maxDistance = boxSize * 10;
-	  controls.target.copy(boxCenter);
-	  controls.update();
+      CameraCtrl.maxDistance = boxSize * 10;
+	  CameraCtrl.target.copy(boxCenter);
+	  CameraCtrl.update();
     });
 }
 
 
-//test controls
-function initCtrl(){
-	//const gui = new dat.GUI;
-	const gui = new dat.GUI({ autoPlace: false });
+/////////////model controler
+function initModelCtrl(){
+	//const modelCtrl = new dat.GUI;
+	const modelCtrl = new dat.GUI({ autoPlace: false });
 	//gui.domElement.id = 'gui';
-	document.getElementById('gui').appendChild(gui.domElement);
-	gui.close();
-	const folder = gui.addFolder("Test");
+	document.getElementById('modelCtrl').appendChild(modelCtrl.domElement);
+	modelCtrl.close();
+	const folder = modelCtrl.addFolder("Test");
 	folder.open();
 	//test.add(obj.scale, 'x', 0,3).name("X").listen();
 	var leftArm = scene.getObjectByName( "Teen_rig_forearmL", true);
@@ -547,7 +473,7 @@ function resizeRendererToDisplaySize(renderer) {
 var lastRefresh=0;
 function render(time) {
 	//console.log(time/1000);
-    controls.update();
+    CameraCtrl.update();
     
    if (resizeRendererToDisplaySize(renderer)) {
        const canvas = renderer.domElement;
@@ -576,91 +502,8 @@ function updateParticles(){
 	})
 }    
 
-//********** on click event, retrieve information from DB.*********
-function getPointsOf(jl){
-	url='http://localhost:8080/zyzySvc/JL/getPointByID/400002';
-	//alert("srcSetup: " + emID + ", " + val);
-    $.ajax({
-        type: "GET",
-        url: url,
-        data: "",
-       // dataType: "text",
-       // contentType: "application/text",
-        success: function(data) {
-        	//alert(data);
-        	if(data != null){
-			//let rslt = JSON.stringify(JSON.parse(data), undefined, 2);
-    		//document.getElementById(sec+"Note").value = rslt;
-    		//$('#'+sec+'Note').html(data);
-    		//textContainer.clipboard.dangerouslyPasteHTML(data, 'api');
-    		json=JSON.parse(data);
-    		//$('#'+sec).text(data);
-    		//$('#'+sec).text(json[0].name);
-    		html="";
-    		json.forEach(function(val){
-    			html = html  
-    					+ "<div class='recHead'>"	+ val.name + "</div>"
-    				   	+ "<div class='recText'>"	+ val.name_explained + "</div>"
-    				   	+ "<div class='recText'>"	+ val.description + "</div>"
-    				   	+ "<div class='recText'>"	+ val.applications + "</div>";
-    		});
-    		$('#'+sec).html(html);
-        }
-        },
-		error : function(jqXHR, textStatus, errorThrown) {
-			alert('error: ' + textStatus + errorThrown);
-		}
-    });
-} 
 
-function populateField(url, fn){
-	//url='http://localhost:8080/zyzySvc/JL/getJLs';
-	//alert("srcSetup: " + emID + ", " + val);
-    $.ajax({
-        type: "GET",
-        url: url,
-        data: "",
-        success: function(data) {
-        	console.log(data);
-        	if(data != null){
-    		//json=JSON.parse(data);
-    		//json.forEach(function(val){
-    		data.forEach(e => fn(e));
-        }
-        },
-		error : function(jqXHR, textStatus, errorThrown) {
-			alert('error: ' + textStatus + errorThrown);
-		}
-    });
-} 
-
-function savePoint(fn) {
-		url="http://localhost:8080/zyzySvc/JL/updatePoint";
-	$.ajax({
-		type : 'POST',
-		async: false,
-		url : url,
-		//contentType: 'application/json',
-		contentType : 'application/text',
-		//contentType: 'text/plain',
-		//dataType: "json",
-		dataType : "text",
-		//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
-		data : fn(),
-		success : function(data, textStatus, jqXHR) {
-			//$('#srcContent').val('note created successfully');
-			//alert('... here');
-            //window.location = window.location.href;
-            //loadPage(srcId, srcSeq);
-            //location.reload();
-            //window.location = thisUrl;
-		},
-		error : function(jqXHR, textStatus, errorThrown) {
-			alert('error: ' + textStatus + errorThrown);
-		}
-	})
-}
-    
+/////////////////////////////////////    
 function composeData() {
 	/*    return JSON.stringify({
 	 "cat": $('input[name="cat"]:checked').val(),
@@ -672,6 +515,7 @@ function composeData() {
 	rsltObj = {
 		line_name:	$('#uiLine').val(),
 		name:	$('#uiPoint').val(),
+		seq:	$('#uiSeq').val(),
 		x:	$('#ptrX').text(),
 		y:	$('#ptrY').text(),
 		z:	$('#ptrZ').text()
