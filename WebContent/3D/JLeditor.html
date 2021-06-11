@@ -66,13 +66,24 @@
 
 <script>
 /* global THREE */
+var lavelSize=40; 
+ 
 var modelObj, root;
 
 // JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
 
+//group points by line name 2021.06.08 going on ...
+var ptsGroups = new THREE.Group(); //('ptr grp by JL');  //THREE.Object3D();   //{};  //   new Map();
+ptsGroups.name='test';
+//example lines['bla'] = new THREE.Group();
+
 //particle systems for simulating flow.
 var ptrObjs = new THREE.Object3D();  
+
+//try use 2D HTML div for labeling (instead of Sprite) 
+const labelContainer = document.querySelector('#labels');
+let labels = [];
 
 //used in raycast
 var interceptMark;   
@@ -85,8 +96,9 @@ setupPopup()  ;
 init3D();
 loadGLTF('as_fem2.glb');
 //initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
-requestAnimationFrame(render);  // this way, "time" can be passed to render()
-
+//2021.06.10 Do not animate. re-render only upand mouse events
+//requestAnimationFrame(render);  // this way, "time" can be passed to render()
+render(e=>{d=new Date();return d.getTime();});
 //********************************************************
 ////// set up the pop up for entering infomations.
 function setupPopup(){
@@ -116,12 +128,13 @@ $("#uiLine").blur(function(){
 	//alert($(this).val());
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
 		e=>{
+			//the drop down list in the pop-up
 			$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
-		
-		if (e['coor'] != null){
-			ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
-			addPoint(e["name"], ptr);
-		}
+			//if column "coor" contains value, create the 3D point and add to the scene.
+			if (e['coor'] != null){
+				ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
+				addPoint(e["line_name"], e["name"], ptr);
+			}
 		}
 	);
 });
@@ -189,6 +202,9 @@ function init3D() {
 	  // left and right rotation range
 	  CameraCtrl.minAzimuthAngle = -Math.PI * (100 / 180);
 	  CameraCtrl.maxAzimuthAngle = Math.PI * (100 / 180);
+	  //2021.06.10 animate only upon change events
+	  CameraCtrl.addEventListener( 'change', render );
+	  
 	  CameraCtrl.update();
   }
   // the ground
@@ -263,10 +279,10 @@ function init3D() {
 			case 1: 
 				break;
 			case 2:
-				pointCameraTo(e);
+				pointCameraOnClick(e);
 				break;
 			case 3:
-				addPointAt(e);
+				addPointOnClick(e);
 				break;
 			default:
 				alert("a strange mouse event");
@@ -275,7 +291,7 @@ function init3D() {
 	});
 	//2021.05.21 seems make no sense !  document.addEventListener( 'touchstart', onDocumentTouchStart, false );   //for touch screen devices
 	
-	function addPointAt( e ) {
+	function addPointOnClick( e ) {
 		e.preventDefault();
 		// (left, top) = (-1,-1), (right, top) = (1, -1)
 		//           (middle, middle) = (0,0)
@@ -315,12 +331,12 @@ $("#ptrY").text(child.point.y);
 $("#ptrZ").text(child.point.z);
 $("#editDialog").dialog( "open" );
 console.log(child.point);
-addPoint("Try", child.point);
+addPoint("lName", 'pName', child.point);
 
 		}
 	}	
 	
-	function pointCameraTo( e ) {
+	function pointCameraOnClick( e ) {
 		e.preventDefault();
 
 		var rect = renderer.domElement.getBoundingClientRect();
@@ -358,7 +374,16 @@ CameraCtrl.update();
   }
 }
 //2021.05.23 
-function addPoint(sName, ptPos){
+function addPoint(lName, sName, ptPos){
+	//If the point group for this JingLuo not created yet, create it. 2021.06.08 going ...
+	if(ptsGroups[lName] == null){
+		console.log(ptsGroups);
+		ptsGroups[lName] = new THREE.Group();
+		ptsGroups[lName].name=lName;
+		ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
+		console.log(ptsGroups);
+	}
+
 	//console.log("point co:", ptPos);
 	var ptSph;
 	{  // the point spot
@@ -369,8 +394,14 @@ function addPoint(sName, ptPos){
 		// ...
 		ptSph.name = sName; 
 	}
-	scene.add( ptSph );   // to be displayed as 3D obj
-	jlObjs.add(ptSph);  // If moved before scene.add(), the added will disarear when exit this closure ?
+	//scene.add( ptSph );   // to be displayed as 3D obj
+	ptsGroups[lName].add(ptSph);
+	//ptsGroups.add(ptSph);
+	//console.log("..." + ptsGroups[lName].children);
+	//jlObj.updateMatrix();  //try
+	
+	// 2021.06.08 ...		
+	//labels.push({elem, noteSph, ptSph});
 }
 
 
@@ -388,6 +419,8 @@ function loadGLTF(gltfName){
 //2021.05.22 DEVEL: so users can interactively contribute ... 
 //Originally, it is not added to jlObjs because these functions are performed in Blender.
 jlObjs.add(modelObj);
+//2021.06.08 going on ...
+jlObjs.add(ptsGroups);
       
 	  // compute the box that contains all the stuff
 	  // from root and below
@@ -405,6 +438,8 @@ jlObjs.add(modelObj);
 	  CameraCtrl.target.copy(boxCenter);
 	  CameraCtrl.update();
     });
+    //2021.06.10: becaue I disabled animation...
+    //no use :( render(e=>{d=new Date();return d.getTime();});
 }
 
 
@@ -490,7 +525,7 @@ function resizeRendererToDisplaySize(renderer) {
 var lastRefresh=0;
 function render(time) {
 	//console.log(time/1000);
-    CameraCtrl.update();
+    //CameraCtrl.update();  //2021.06.10: is it needed?
     
    if (resizeRendererToDisplaySize(renderer)) {
        const canvas = renderer.domElement;
@@ -501,7 +536,11 @@ function render(time) {
     renderer.render(scene, camera);
     //updateScreenPosition();  //will see if it is needed.
     
-    requestAnimationFrame(render);
+    // TODO: display lables
+    console.log("updateLabels()");
+    updateLabels();
+    //2021.06.10: disable animation. render will be requested upop events programtically.
+    //requestAnimationFrame(render);
 }
 
 
