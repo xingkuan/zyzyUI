@@ -173,22 +173,75 @@ labelContainer.appendChild(elem);
   }*/
 }
 
+function buildJLpath(jl){
+url='http://localhost:8080/zyzySvc/JL/getPointsByJL/'+jl;
+    $.ajax({
+        type: "GET",
+        url: url,
+        data: "",
+        success: function(data) {
+        	console.log(data);
+        	if(data != null){
+    		//json=JSON.parse(data);
+    		//json.forEach(function(val){
+    		data.forEach(e => fn(e));
+        	}
+       	 },
+		 error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		 }
+    });
+}
 
-//2021.06.09 May not need
-function createLabel(sName){
-	  const elem = document.createElement('div');
-	  elem.id = sName;
-	  //elem.textContent = sText;
-	  //elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
-	  elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + sText + '\');">' +sText + '</a>';
-	  labelContainerElem.appendChild(elem);
-	  // and add to lables array, also ptSph, so it can be checked by raycaster	
-	  //labels.push({elem, spritePos, ptSph});
-	  // TODO: to use dumy object for note locations ... maybe too heavey, but that is what I can come up for now
-		let noteGeo = new THREE.SphereGeometry( 0.01, 4, 4 );
-		let noteMat = new THREE.MeshBasicMaterial( {color: bc} );
-		noteSph = new THREE.Mesh( noteGeo, noteMat );
-		noteSph.position.set(spritePos.x, spritePos.y, spritePos.z);
-		noteSph.name = sName; 
-		labels.push({elem, noteSph, ptSph});
-}		
+//(lname, lnColor, ptColor){
+function showJL(){
+console.log('show JL');
+ptsGroups.children.forEach((e,i)=>{
+console.log(e, i);
+lName=e.name;
+points=[];
+	e.children.forEach((p, n)=>{
+		console.log(p.name);
+		points.push(p.position);
+	});
+	
+	if(lName!='lName')
+		DrawLine(points, new THREE.Vector3(0,0,0), lName);
+});
+
+/*    if((preSegName=="")||(ptrName[1] == preSegName)){
+       	points.push(child.position);   
+    }else{
+       	DrawLine(points, pts.position, lname+preSegName);
+       	//clean up the array and start for a new segment:
+       	points=[];
+       	preSegName="";
+       	points.push(child.position);
+    };
+    
+    preSegName=ptrName[1];
+    
+    //the last segment in the least.
+	DrawLine(points, pts.position, lname+preSegName);
+*/
+
+	
+	function DrawLine(ptsLst, loc, nm){
+		curve = new THREE.CatmullRomCurve3(ptsLst, false);
+		const ps = curve.getPoints(100);
+		const geometry = new THREE.BufferGeometry().setFromPoints(ps);
+		const material = new THREE.LineBasicMaterial({
+			color: 0x00ff00,
+			//color: lnColor,
+			linewidth: 2,
+			transparent: true, opacity: 0.8 ,
+		});
+		curveObject = new THREE.Line(geometry, material);
+		//curveObject.position.set(pts.position.x,pts.position.y,pts.position.z);
+		curveObject.position.set(loc.x, loc.y, loc.z);
+		//curveObject.name=lname;
+		curveObject.name=nm;
+		jlObjs.add(curveObject);
+	}		
+
+}

@@ -34,6 +34,17 @@
   <div id="intersectObjs"></div>
 </div>
 
+<br>
+<br>
+<div id="xx">
+<button onclick="showJL()">show JingLuo</button>
+<!--
+JingLuo: 
+<select id='JLnames' onchange='buildJLpath($(this).val())'>
+</select>
+-->
+</div>
+
 <!-- pop up form -->
 <div id="editDialog" title="edit point" >
 <form id=f1>
@@ -75,7 +86,7 @@ var jlObjs = new THREE.Object3D();
 
 //group points by line name 2021.06.08 going on ...
 var ptsGroups = new THREE.Group(); //('ptr grp by JL');  //THREE.Object3D();   //{};  //   new Map();
-ptsGroups.name='test';
+ptsGroups.name='ptrGroups';
 //example lines['bla'] = new THREE.Group();
 
 //particle systems for simulating flow.
@@ -91,6 +102,14 @@ var interceptMark;
 var camera, scene, renderer, CameraCtrl; 
 
 const canvas = document.querySelector('#c');
+
+//setup the 'JLnames'. When selected, the path of the JingLuo will be created and added to the scene.  
+//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
+//	function(e){
+//		//populate the dropdown list
+//		$("#JLnames").append($("<option>"+e["line_name"]+"</option>").attr("value", e["line_name"]));
+//	}
+//);  
 
 setupPopup()  ;
 init3D();
@@ -148,7 +167,7 @@ $("#uiPoint").blur(function(){
 		});
 });
 
-populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List;
+populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
 		function(e){
 			//populate the dropdown list
 			$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
