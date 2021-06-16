@@ -34,17 +34,6 @@
   <div id="intersectObjs"></div>
 </div>
 
-<br>
-<br>
-<div id="xx">
-<button onclick="showJL()">show JingLuo</button>
-<!--
-JingLuo: 
-<select id='JLnames' onchange='buildJLpath($(this).val())'>
-</select>
--->
-</div>
-
 <!-- pop up form -->
 <div id="editDialog" title="edit point" >
 <form id=f1>
@@ -74,17 +63,26 @@ JingLuo:
 </div>
 
 <canvas id="dummyCanvas" width="64" height="64"></canvas>
+<div id="xx">
+<button onclick="showJL()">show JingLuo</button>
+<!--
+JingLuo: 
+<select id='JLnames' onchange='buildJLpath($(this).val())'>
+</select>
+-->
+</div>
+
 
 <script>
 /* global THREE */
-var lavelSize=40; 
+var lavelSize=30; 
  
 var modelObj, root;
 
 // JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
 
-//group points by line name 2021.06.08 going on ...
+//group points by line name 
 var ptsGroups = new THREE.Group(); //('ptr grp by JL');  //THREE.Object3D();   //{};  //   new Map();
 ptsGroups.name='ptrGroups';
 //example lines['bla'] = new THREE.Group();
@@ -148,6 +146,7 @@ $("#uiLine").blur(function(){
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
 		e=>{
 			//the drop down list in the pop-up
+			$("#dataPtrList").empty();
 			$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
 			//if column "coor" contains value, create the 3D point and add to the scene.
 			if (e['coor'] != null){
@@ -350,8 +349,8 @@ $("#ptrY").text(child.point.y);
 $("#ptrZ").text(child.point.z);
 $("#editDialog").dialog( "open" );
 console.log(child.point);
-addPoint("lName", 'pName', child.point);
-
+//addPoint("lName", 'pName', child.point);
+//to popup handler perform the saving.
 		}
 	}	
 	
@@ -394,7 +393,7 @@ CameraCtrl.update();
 }
 //2021.05.23 
 function addPoint(lName, sName, ptPos){
-	//If the point group for this JingLuo not created yet, create it. 2021.06.08 going ...
+	//If the point group for this JingLuo not created yet, create it. 
 	if(ptsGroups[lName] == null){
 		console.log(ptsGroups);
 		ptsGroups[lName] = new THREE.Group();
@@ -438,7 +437,6 @@ function loadGLTF(gltfName){
 //2021.05.22 DEVEL: so users can interactively contribute ... 
 //Originally, it is not added to jlObjs because these functions are performed in Blender.
 jlObjs.add(modelObj);
-//2021.06.08 going on ...
 jlObjs.add(ptsGroups);
       
 	  // compute the box that contains all the stuff

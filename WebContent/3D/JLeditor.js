@@ -227,9 +227,11 @@ points=[];
 
 	
 	function DrawLine(ptsLst, loc, nm){
-		curve = new THREE.CatmullRomCurve3(ptsLst, false);
-		const ps = curve.getPoints(100);
-		const geometry = new THREE.BufferGeometry().setFromPoints(ps);
+		curve = new THREE.CatmullRomCurve3(ptsLst, false);  
+		//curve.curveType = "centripetal";
+		//curve.closed = false;
+		const ps = curve.getPoints(100);  //get 100 aliquots
+		const geometry = new THREE.BufferGeometry().setFromPoints(ps);  //2021.08.13: why not "curve"?
 		const material = new THREE.LineBasicMaterial({
 			color: 0x00ff00,
 			//color: lnColor,
