@@ -1,5 +1,5 @@
 import * as THREE from './threejs/build/three.module.js';
-import {labelSize} from './JLeditorGlobals.js';
+//import {labelSize} from './JLeditorGlobals.js';
 
 function populateField(url, fn){
 	//url='http://localhost:8080/zyzySvc/JL/getJLs';

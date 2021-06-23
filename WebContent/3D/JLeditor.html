@@ -6,13 +6,9 @@
 </head>
 
 <link href = "../jquery/jquery-ui.css" rel = "stylesheet">
-
 <link href = "JLeditor.css" rel = "stylesheet">
-
 <script src="javascripts/dat.gui.min.js"></script>
-
 <script src="../jquery/jquery-3.3.1.min.js"></script>
-
 <script src="../jquery/jquery-ui.js"></script>
 
 <style>
@@ -21,136 +17,68 @@
 
 
 <body>
-<!-- for prototyping -->
-<div id="debug">
-  <div id="mouseCoScreen"></div>
-  <div id="renderRect"></div>
-  <div id="mouseCoNorm"></div>
-  <div id="cameraCo"></div>
-  <div id="intersectObjs"></div>
-  <div id="xx">
-	<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
-	<button id="showJL">show JingLuo</button>
-	<button id="switchEditor">Pointer Editor</button>
-  </div>
-</div>
-
-<!-- pop up form -->
-<div id="editDialog" title="edit point" >
-<form id=f1>
-  <p>
-  <span id="ptrX"></span>,<span id="ptrY"></span><span id="ptrZ"></span><br>
-    Line: <input list="dataLineList" id="uiLine" name="uiLine" />
-	<datalist id="dataLineList"></datalist>
-  <br>
-  Point: <input list="dataPtrList" id="uiPoint" name="uiPoint" />
-	<datalist id="dataPtrList"></datalist>
-  <br>
-  Seq: <input type="number" id="uiSeq" name="uiSeq" />
-  <br>
-  expond:<textarea id="xpond" name="nameExpond" cols=40 rows=3 ></textarea>
-  <br>
-  apps:<textarea id="apps" name="apps" cols=40 rows=3 ></textarea>
-  <br>
-  desc:<textarea id="desc" name="desc" cols=40 rows=3 ></textarea>
-</form>
-</div>
-
-
-<div id="container" class="container">
-	<canvas id="c"></canvas>
+<div style="position:fixed;top:0; left:0;z-index:1">
     <div id="labels"></div>
-	<div id="modelCtrl"></div>
+	<div id="modelCtrl" style="position:relative;float:left"></div>
+	<div style="position:relative;float:left">
+ 		<select id="lineSelect" name="lineSelect" />
+   			<option style="font-weight: bold; color: red" value="" selected>select a JL for editing</option>
+		</select> 
+  		<!--   button id="btnEditJL" onclick=initJL($(this))>Load</button   That wouldn't work-->
+ 		<button id="btnEditJL" >Load</button>
+	</div>
 </div>
-
-<canvas id="dummyCanvas" width="64" height="64"></canvas>
-
+<div id="container" class="container"  style="position:fixed;top:0; left:0;z-index:0">
+	<canvas id="c"></canvas>
+</div>
 
 <script type="module">
-import * as THREE from './threejs/build/three.module.js'
+import * as THREE from './threejs/build/three.module.js';
 
-import {init3D, loadGLTF, render, addPointToJLObjs, showJL, pointerModified} from './JLeditorGlobals.js';
-
-const editorMode = {
-	JINGLUO: 'JingLuo',
-	POINTER: 'Pointer'
-};
-var editor=editorMode.JINGLUO;  
-$("#switchEditor").text(editor);
-
-//hookup showJL() to button "#showJL"
-$("#showJL").click( e=> {
-		showJL(); 
-	});
-$("#switchEditor").click( e=> {
-		switch(editor) {
-			case editorMode.JINGLUO:
-				editor=editorMode.POINTER;
-				break; 
-			case editorMode.POINTER:
-				editor=editorMode.JINGLUO;
-				break;
-			default:
-				alert("wrong editor mode");
+$("#btnEditJL").click(function(){
+	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$("#lineSelect").val(), 
+		e=>{
+			//if column "coor" contains value, then create the 3D point and add to the scene.
+			let ptr;
+			if (e['coor'] != null){
+				ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
+				addPointToJLObjs(e["line_name"], e["name"], ptr);
+			}
 		}
-		$("#switchEditor").text(editor);
-		//2021.06.19: for 'JingLuo', use "TransformControls" to add/move control points;
-		//    TODO    for 'Pointer', use the popup to add control XueWei;
-	});
+	);
+	addTransformControler($("#lineSelect").val());
+});
+
+import {populateField} from './XWJLdata.js';
+populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
+		function(e){
+			//populate the dropdown list
+			let option = $('<option />');
+     		option.attr('value', e["line_name"]).text(e["line_name"]);
+			$("#lineSelect").append(option);
+			//$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
+		});  
 
 
 
-//setup the 'JLnames'. When selected, the path of the JingLuo will be created and added to the scene.  
-//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
-//	function(e){
-//		//populate the dropdown list
-//		$("#JLnames").append($("<option>"+e["line_name"]+"</option>").attr("value", e["line_name"]));
-//	}
-//);  
 
- 
+import {init3D, loadGLTF, render, addPointToJLObjs, showJL, 
+	addTransformControler, removeTransformControler, setupPointEditor,
+	initPointLabels, animateJLeditor} from './editorGlobals.js';
 
-//initGlobalVars();
-setupPopup()  ;
 init3D('#c', 30);
 loadGLTF('as_fem2.glb');
-pointerModified();
+initPointLabels('#labels');
+//addTransformControler();
+animateJLeditor();
 
-
-import {populateField} from './JLeditor.js';
-
+/*
 //initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
 //2021.06.10 Do not animate. re-render only upand mouse events
 //requestAnimationFrame(render);  // this way, "time" can be passed to render()
 
-
 //2021.06.17 don't do it yet. render(e=>{d=new Date();return d.getTime();});
 
-//********************************************************
-////// set up the pop up for entering infomations.
-function setupPopup(){
-$( "#editDialog" ).dialog({
-	autoOpen: false,
-	modal: true,
-	//position:pos,
- 	buttons: {
-    	 "Close ": function() {
-	    	$(this).dialog( "close" );
-      	},
-     	"Submit ": function(){
-	  		//console.log($("#uiLine").val()+","+$("#uiPoint").val());
-	     	savePoint(composeData);
-	   		//re-enable 3D object event handler.
-	     	$("#container").attr('disabled','auto');		
-			$( this ).dialog( "close" );
-			//clear input fields
-			$('#uiLine').text("");
-			$('#uiPoint').text("");
-			$('#uiSeq').text("");
-     	}
-	}
-});
-//popup form field event hanlers
 $("#uiLine").blur(function(){
 	//alert($(this).val());
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
@@ -167,15 +95,7 @@ $("#uiLine").blur(function(){
 		}
 	);
 });
-$("#uiPoint").blur(function(){
-	//alert($(this).val());
-	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#uiLine").val() +"/"+$(this).val(), 
-		e=>{$("#uiSeq").val(e["seq"]);
-			$("#xpond").text(e["name_explained"]);
-			$("#apps").text(e["applications"]);
-			$("#desc").text(e["description"]);
-		});
-});
+
 
 populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
 		function(e){
@@ -183,21 +103,13 @@ populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of
 			$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
 			//add 3D points to the 3D model
 		});  
-};  //end setupPopup()
 
 ////////////////////
 
-
-
-
-
-
-
-
-
-
+*/
 
 //var flowTexture;   //needed global var so it can be accessed from within render()  
+
 /*2021.06.16  This is certainly not doing anything !!!
 function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
@@ -227,33 +139,6 @@ function updateParticles(){
 	})
 }    
 */
-
-/////////////////////////////////////    
-function composeData() {
-	/*    return JSON.stringify({
-	 "cat": $('input[name="cat"]:checked').val(),
-	 "data": $('#txtNote').val()
-	 })
-	 */
-	//alert($('#selRelation option:selected').val());
-	var strRslt, rsltObj;
-	rsltObj = {
-		line_name:	$('#uiLine').val(),
-		name:	$('#uiPoint').val(),
-		seq:	$('#uiSeq').val(),
-		x:	$('#ptrX').text(),
-		y:	$('#ptrY').text(),
-		z:	$('#ptrZ').text()
-		
-	};
-	
-	//alert(typeof rsltObj );
-	let json= JSON.stringify(rsltObj)
-
-	//return strRslt;
-	return json;
-}   
-
 
 
 
