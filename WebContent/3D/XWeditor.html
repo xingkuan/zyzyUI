@@ -6,13 +6,9 @@
 </head>
 
 <link href = "../jquery/jquery-ui.css" rel = "stylesheet">
-
 <link href = "JLeditor.css" rel = "stylesheet">
-
 <script src="javascripts/dat.gui.min.js"></script>
-
 <script src="../jquery/jquery-3.3.1.min.js"></script>
-
 <script src="../jquery/jquery-ui.js"></script>
 
 <style>
@@ -21,18 +17,20 @@
 
 
 <body>
-<!-- for prototyping -->
-<div id="debug">
-  <div id="mouseCoScreen"></div>
-  <div id="renderRect"></div>
-  <div id="mouseCoNorm"></div>
-  <div id="cameraCo"></div>
-  <div id="intersectObjs"></div>
-  <div id="xx">
-	<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
-	<button id="showJL">show JingLuo</button>
-	<button id="switchEditor">EditMode</button>
-  </div>
+<div style="position:fixed;top:0; left:0;z-index:1">
+	<div id="modelCtrl" style="position:relative;float:left"></div>
+	<div id="debug">
+	  <div id="mouseCoScreen"></div>
+	  <div id="renderRect"></div>
+	  <div id="mouseCoNorm"></div>
+	  <div id="cameraCo"></div>
+	  <div id="intersectObjs"></div>
+	  <div id="xx">
+		<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
+		<span id="jlName"></span><button id="showJL">show JL</button>
+		<button id="switchEditor">EditMode</button>
+	  </div>
+	</div>
 </div>
 
 <!-- pop up form -->
@@ -60,16 +58,15 @@
 <div id="container" class="container">
 	<canvas id="c"></canvas>
     <div id="labels"></div>
-	<div id="modelCtrl"></div>
 </div>
 
 <canvas id="dummyCanvas" width="64" height="64"></canvas>
 
 
 <script type="module">
-import * as THREE from './threejs/build/three.module.js'
+//import * as THREE from './threejs/build/three.module.js'
 
-import {init3D, loadGLTF, render, addPointToJLObjs, showJL, 
+import {init3D, loadGLTF, render, createPoints, createJL, 
 	addTransformControler, removeTransformControler, setupPointEditor,
 	initPointLabels} from './editorGlobals.js';
 
@@ -82,17 +79,19 @@ $("#switchEditor").text(editor);
 
 //hookup showJL() to button "#showJL"
 $("#showJL").click( e=> {
-		showJL(); 
+alert("not useful");
+//		createJL($("#jlName").text()); 
+//buildJLpath(TODO);
 	});
 $("#switchEditor").click( e=> {
 		switch(editor) {
 			case editorMode.JINGLUO:
 				editor=editorMode.POINTER;
-				addTransformControler();
+				removeTransformControler()
 				break; 
 			case editorMode.POINTER:
 				editor=editorMode.JINGLUO;
-				removeTransformControler
+				addTransformControler($("#jlName").text());
 				break;
 			default:
 				alert("wrong editor mode");
@@ -159,19 +158,24 @@ $( "#editDialog" ).dialog({
 //popup form field event hanlers
 $("#uiLine").blur(function(){
 	//alert($(this).val());
+	let ptr, ptrList=[];
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
 		e=>{
+			$("#jlName").text($(this).val());
+
 			//the drop down list in the pop-up
 			$("#dataPtrList").empty();
 			$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
 			//if column "coor" contains value, then create the 3D point and add to the scene.
-			let ptr;
 			if (e['coor'] != null){
-				ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
-				addPointToJLObjs(e["line_name"], e["name"], ptr);
+				//ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
+//2021.06.24 ...
+				//addPointToJLObjs(e["line_name"], e["name"], e['coor']['x'], e['coor']['y'], e['coor']['z']);
+				ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
 			}
-		}
-	);
+		});
+	createPoints($(this).val(), ptrList);
+	createJL($(this).val(), ptrList);
 });
 $("#uiPoint").blur(function(){
 	//alert($(this).val());

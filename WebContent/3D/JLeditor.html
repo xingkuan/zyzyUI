@@ -33,7 +33,7 @@
 </div>
 
 <script type="module">
-import * as THREE from './threejs/build/three.module.js';
+//import * as THREE from './threejs/build/three.module.js';
 
 $("#btnEditJL").click(function(){
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$("#lineSelect").val(), 
@@ -41,8 +41,8 @@ $("#btnEditJL").click(function(){
 			//if column "coor" contains value, then create the 3D point and add to the scene.
 			let ptr;
 			if (e['coor'] != null){
-				ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
-				addPointToJLObjs(e["line_name"], e["name"], ptr);
+				//ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
+				addPointToJLObjs(e["line_name"], e["name"], e['coor']['x'], e['coor']['y'], e['coor']['z']);
 			}
 		}
 	);
@@ -62,7 +62,7 @@ populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of
 
 
 
-import {init3D, loadGLTF, render, addPointToJLObjs, showJL, 
+import {init3D, loadGLTF, render, addPointToJLObjs,  
 	addTransformControler, removeTransformControler, setupPointEditor,
 	initPointLabels, animateJLeditor} from './editorGlobals.js';
 

@@ -1,5 +1,4 @@
-import * as THREE from './threejs/build/three.module.js';
-//import {labelSize} from './JLeditorGlobals.js';
+//import * as THREE from './threejs/build/three.module.js';
 
 function populateField(url, fn){
 	//url='http://localhost:8080/zyzySvc/JL/getJLs';
@@ -7,6 +6,7 @@ function populateField(url, fn){
     $.ajax({
         type: "GET",
         url: url,
+		async: false,
         data: "",
         success: function(data) {
         	console.log(data);

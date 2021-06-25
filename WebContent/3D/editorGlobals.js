@@ -287,7 +287,7 @@ function setupPointEditor(){
 	}	
 }
 //2021.05.23 
-function addPointToJLObjs(lName, sName, ptPos){
+function addPointToJLObjs(lName, sName, x,y,z){
 	//If the point group for this JingLuo not created yet, create it. 
 	if(ptsGroups[lName] == null){
 		console.log(ptsGroups);
@@ -303,18 +303,40 @@ function addPointToJLObjs(lName, sName, ptPos){
 		let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
 		let ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
 		ptSph = new THREE.Mesh( ptGeo, ptMat );
-		ptSph.position.set(ptPos.x, ptPos.y, ptPos.z);
+		ptSph.position.set(x, y, z);
 		// ...
 		ptSph.name = sName; 
 	}
 	//scene.add( ptSph );   // to be displayed as 3D obj
 	ptsGroups[lName].add(ptSph);
-	//ptsGroups.add(ptSph);
-	//console.log("..." + ptsGroups[lName].children);
-	//jlObj.updateMatrix();  //try
-	
-	// 2021.06.08 ...		
-	//labels.push({elem, noteSph, ptSph});
+}
+
+function createPoints(lName, ptrLst){
+	////If the point group for this JingLuo not created yet, create it. 
+	//if(ptsGroups[lName] == null){
+	//	console.log(ptsGroups);
+		ptsGroups[lName] = new THREE.Group();
+		ptsGroups[lName].name=lName;
+		ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
+	//	console.log(ptsGroups);
+	//}
+
+	//console.log("point co:", ptPos);
+	ptrLst.forEach(p=>{
+		let [xwName, seq, co, isXW]=p;
+		if(isXW){
+			let ptSph;
+			// the point spot
+			let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
+			let ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
+			ptSph = new THREE.Mesh( ptGeo, ptMat );
+			ptSph.position.set(co['x'], co['y'], co['z']);
+			// ...
+			ptSph.name = xwName + seq; 
+			//scene.add( ptSph );   // to be displayed as 3D obj
+			ptsGroups[lName].add(ptSph);
+		}
+	});
 }
 
 
@@ -448,39 +470,17 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 
 
 //(lname, lnColor, ptColor){
-function showJL(){
+/*function createJL(jlName){
 	//console.log('show JL');
-	ptsGroups.children.forEach((e,i)=>{
-		console.log(e, i);
-		let lName=e.name;
-		let points=[];
-		e.children.forEach((p, n)=>{
-			console.log(p.name);
-			points.push(p.position);
-		});
-	
-		if(lName!='lName')  //2021.06.18 TODO: clean data should not even have it
-			DrawLine(points, new THREE.Vector3(0,0,0), lName);
+	let points=[];
+	let jlPtrs = jlObjs.getObjectByName( jlName );
+	jlPtrs.children.forEach((e,i)=>{
+		points.push(e.position);
 	});
-
-/*    if((preSegName=="")||(ptrName[1] == preSegName)){
-       	points.push(child.position);   
-    }else{
-       	DrawLine(points, pts.position, lname+preSegName);
-       	//clean up the array and start for a new segment:
-       	points=[];
-       	preSegName="";
-       	points.push(child.position);
-    };
-    
-    preSegName=ptrName[1];
-    
-    //the last segment in the least.
-	DrawLine(points, pts.position, lname+preSegName);
-*/
-
+	createCurve(points, new THREE.Vector3(0,0,0), jlName);
 	
-	function DrawLine(ptsLst, loc, nm){
+	
+	function createCurve(ptsLst, loc, nm){
 		let curve = new THREE.CatmullRomCurve3(ptsLst, false);  
 		//curve.curveType = "centripetal";
 		//curve.closed = false;
@@ -499,7 +499,38 @@ function showJL(){
 		curveObject.name=nm;
 		jlObjs.add(curveObject);
 	}		
-
+}*/
+function createJL(jlName, ptrLst){
+	//console.log('show JL');
+	if(ptrLst.length>1){
+		let points=[];
+		ptrLst.forEach((p,i)=>{
+			let [xwName, seq, co, isXW]=p;
+			if(isXW)
+				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
+		});
+		createCurve(points, new THREE.Vector3(0,0,0), jlName);
+	}
+	
+	function createCurve(ptsLst, loc, nm){
+		let curve = new THREE.CatmullRomCurve3(ptsLst, false);  
+		//curve.curveType = "centripetal";
+		//curve.closed = false;
+		const ps = curve.getPoints(100);  //get 100 aliquots
+		const geometry = new THREE.BufferGeometry().setFromPoints(ps);  //2021.08.13: why not "curve"?
+		const material = new THREE.LineBasicMaterial({
+			color: 0x00ff00,
+			//color: lnColor,
+			linewidth: 2,
+			transparent: true, opacity: 0.8 ,
+		});
+		let curveObject = new THREE.Line(geometry, material);
+		//curveObject.position.set(pts.position.x,pts.position.y,pts.position.z);
+		curveObject.position.set(loc.x, loc.y, loc.z);
+		//curveObject.name=lname;
+		curveObject.name=nm;
+		jlObjs.add(curveObject);
+	}		
 }
 
 
@@ -591,6 +622,7 @@ function addTransformControler(jl){
 	//let canvas = renderer.domElement;
 	var jlName = jl;
 	transformControl = new TransformControls( camera, canvas );
+	transformControl.setSize(0.5);
 	transformControl.addEventListener( 'change', render );
 	transformControl.addEventListener( 'dragging-changed', function ( event ) {
 			orbitCtrl.enabled = ! event.value;
@@ -690,7 +722,7 @@ function addTransformControler(jl){
 	}
 }
 
-export {labelSize, renderer, init3D, loadGLTF, render,addPointToJLObjs, showJL, 
+export {labelSize, renderer, init3D, loadGLTF, render,createPoints, createJL, 
 addTransformControler, removeTransformControler, setupPointEditor,
 initPointLabels, animateJLeditor};
 //export {canvas, camera, scene, renderer, CameraCtrl, labelSize, initGlobalVars};
