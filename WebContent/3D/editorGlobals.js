@@ -5,7 +5,8 @@ import { TransformControls } from "./threejs/examples/jsm/controls/TransformCont
 //import { RoughnessMipmapper } from './threejs/examples/jsm/utils/RoughnessMipmapper.js';
 
 var scene, camera, renderer, canvas, raycaster, orbitCtrl, transformControl, labelSize,
-	labelContainer, labels;
+	labelContainer, labels,
+	activeJL;
 
 // JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
@@ -618,9 +619,8 @@ function removeTransformControler(){
 	scene.remove(transformControl);
 }
 //https://threejs.org/examples/webgl_geometry_spline_editor.html
-function addTransformControler(jl){
+function setupTransformControler(){
 	//let canvas = renderer.domElement;
-	var jlName = jl;
 	transformControl = new TransformControls( camera, canvas );
 	transformControl.setSize(0.5);
 	transformControl.addEventListener( 'change', render );
@@ -663,7 +663,7 @@ function addTransformControler(jl){
 		mouse.y = - ( ( event.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
 	
 		raycaster.setFromCamera(mouse,camera);
-		let jlPtrs = jlObjs.getObjectByName( jlName );
+		let jlPtrs = jlObjs.getObjectByName( activeJL );
 		let intersects = raycaster.intersectObjects(jlPtrs.children, true);
 	
 	//console.log("onPointerMove(), points: " + ptsGroups.children);
@@ -721,8 +721,11 @@ function addTransformControler(jl){
 		}
 	}
 }
+function hookupTransformControler(jl){
+	activeJL = jl;
+}
 
 export {labelSize, renderer, init3D, loadGLTF, render,createPoints, createJL, 
-addTransformControler, removeTransformControler, setupPointEditor,
+setupTransformControler, hookupTransformControler, removeTransformControler, setupPointEditor,
 initPointLabels, animateJLeditor};
 //export {canvas, camera, scene, renderer, CameraCtrl, labelSize, initGlobalVars};

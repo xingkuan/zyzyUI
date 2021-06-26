@@ -27,8 +27,8 @@
 	  <div id="intersectObjs"></div>
 	  <div id="xx">
 		<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
-		<span id="jlName"></span><button id="showJL">show JL</button>
-		<button id="switchEditor">EditMode</button>
+		<span id="jlName"></span>
+		<button id="hookupTransformCtrl">Hookup Transform Controller</button>
 	  </div>
 	</div>
 </div>
@@ -67,41 +67,12 @@
 //import * as THREE from './threejs/build/three.module.js'
 
 import {init3D, loadGLTF, render, createPoints, createJL, 
-	addTransformControler, removeTransformControler, setupPointEditor,
+	setupTransformControler, hookupTransformControler, removeTransformControler, setupPointEditor,
 	initPointLabels} from './editorGlobals.js';
 
-const editorMode = {
-	JINGLUO: 'JingLuo',
-	POINTER: 'Pointer'
-};
-var editor=editorMode.POINTER;  
-$("#switchEditor").text(editor);
-
-//hookup showJL() to button "#showJL"
-$("#showJL").click( e=> {
-alert("not useful");
-//		createJL($("#jlName").text()); 
-//buildJLpath(TODO);
+$("#hookupTransformCtrl").click( e=> {
+	hookupTransformControler($("#jlName").text());
 	});
-$("#switchEditor").click( e=> {
-		switch(editor) {
-			case editorMode.JINGLUO:
-				editor=editorMode.POINTER;
-				removeTransformControler()
-				break; 
-			case editorMode.POINTER:
-				editor=editorMode.JINGLUO;
-				addTransformControler($("#jlName").text());
-				break;
-			default:
-				alert("wrong editor mode");
-		}
-		$("#switchEditor").text(editor);
-		//2021.06.19: for 'JingLuo', use "TransformControls" to add/move control points;
-		//    TODO    for 'Pointer', use the popup to add control XueWei;
-	});
-
-
 
 //setup the 'JLnames'. When selected, the path of the JingLuo will be created and added to the scene.  
 //populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
@@ -119,10 +90,10 @@ initPointLabels('#labels');
 init3D('#c', 30);
 loadGLTF('as_fem2.glb');
 setupPointEditor();
-//addTransformControler();
+setupTransformControler();
 
 
-import {populateField} from './XWJLdata.js';
+import {populateField, savePoint} from './XWJLdata.js';
 
 //initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
 //2021.06.10 Do not animate. re-render only upand mouse events

@@ -23,7 +23,7 @@ function populateField(url, fn){
 } 
 
 function savePoint(fn) {
-		url="http://localhost:8080/zyzySvc/JL/updatePoint";
+	let	url="http://localhost:8080/zyzySvc/JL/upsertPoint";
 	$.ajax({
 		type : 'POST',
 		async: false,
@@ -52,7 +52,7 @@ function savePoint(fn) {
 
 
 function buildJLpath(jl){
-url='http://localhost:8080/zyzySvc/JL/getPointsByJL/'+jl;
+	let url='http://localhost:8080/zyzySvc/JL/getPointsByJL/'+jl;
     $.ajax({
         type: "GET",
         url: url,
@@ -73,6 +73,6 @@ url='http://localhost:8080/zyzySvc/JL/getPointsByJL/'+jl;
 
 
 
-export {populateField};
+export {populateField, savePoint};
 
 
