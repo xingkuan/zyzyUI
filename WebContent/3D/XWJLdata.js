@@ -9,7 +9,7 @@ function populateField(url, fn){
 		async: false,
         data: "",
         success: function(data) {
-        	console.log(data);
+        	//console.log(data);
         	if(data != null){
     		//json=JSON.parse(data);
     		//json.forEach(function(val){

@@ -16,22 +16,7 @@
 </style>
 
 
-<body>
-<div style="position:fixed;top:0; left:0;z-index:1">
-	<div id="modelCtrl" style="position:relative;float:left"></div>
-	<div id="debug">
-	  <div id="mouseCoScreen"></div>
-	  <div id="renderRect"></div>
-	  <div id="mouseCoNorm"></div>
-	  <div id="cameraCo"></div>
-	  <div id="intersectObjs"></div>
-	  <div id="xx">
-		<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
-		<span id="jlName"></span>
-		<button id="hookupTransformCtrl">Hookup Transform Controller</button>
-	  </div>
-	</div>
-</div>
+<body">
 
 <!-- pop up form -->
 <div id="editDialog" title="edit point" >
@@ -55,24 +40,73 @@
 </div>
 
 
-<div id="container" class="container">
-	<canvas id="c"></canvas>
-    <div id="labels"></div>
+<div style="display:flex">
+	<div id="jlCheckBox" style="width:120px"></div>
+	<div id="container" class="container" style="float:left">
+		<div style="position:relative;top:0; left:0;z-index:1">
+			<div id="modelCtrl" style="position:relative;float:left"></div>
+			<div id="debug">
+	  			<div id="mouseCoScreen"></div>
+	  			<div id="renderRect"></div>
+	  			<div id="mouseCoNorm"></div>
+	  			<div id="cameraCo"></div>
+	  			<div id="intersectObjs"></div>
+	  		</div>
+	  	</div>	
+		<div id="xx"  style="background:black; color:white">
+			<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
+			<span id="jlName"></span>
+			<!-- button id="hookupTransformCtrl">Hookup Transform Controller</button   -->
+			<input type="checkbox" id="newEdMode"/><span id="lblNewEdMode">new</span> 
+			<input type="checkbox" id="stickMdMode"/><span id="lblStickMdMode">mod s.</span> 
+			<input type="checkbox" id="freeMdMode"/><span id="lblFreeMdMode">mod f.</span> 
+		</div>
+
+		<canvas id="c"></canvas>
+	    <div id="labels"></div>
+    </div>
 </div>
 
-<canvas id="dummyCanvas" width="64" height="64"></canvas>
+<div id="dummyCanvas" width="64" height="64"></canvas>
 
 
 <script type="module">
 //import * as THREE from './threejs/build/three.module.js'
 
 import {init3D, loadGLTF, render, createPoints, createJL, 
-	setupTransformControler, hookupTransformControler, removeTransformControler, setupPointEditor,
+	hookupTransformControler, 
+	setupFreeModifier, removeFreeModifier, 
+	setupStickModifier, removeStickModifier, 
+	setupNewPointEditor, removeNewPointEditor,
 	initPointLabels} from './editorGlobals.js';
 
-$("#hookupTransformCtrl").click( e=> {
-	hookupTransformControler($("#jlName").text());
-	});
+//$("#hookupTransformCtrl").click( e=> {
+//	hookupTransformControler($("#jlName").text());
+//	});
+
+ $('#newEdMode').on('change', function() {
+	if(this.checked) {
+//alert("is it working");
+		setupNewPointEditor();
+	}else{
+		removeNewPointEditor();
+	}
+});
+ $('#stickMdMode').on('change', function() {
+	if(this.checked) {
+		setupStickModifier();
+	}else{
+		removeStickModifier();
+	}
+});
+ $('#freeMdMode').on('change', function() {
+	if(this.checked) {
+		//hookupTransformControler($("#jlName").text());
+		setupFreeModifier();
+	}else{
+		removeFreeModifier();
+	}
+});
 
 //setup the 'JLnames'. When selected, the path of the JingLuo will be created and added to the scene.  
 //populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
@@ -82,15 +116,36 @@ $("#hookupTransformCtrl").click( e=> {
 //	}
 //);  
 
- 
+//size container properly: 
+let a_ratio=1.5;
+let w=$(window).width();
+let h=$(window).height();
+if(w>h/a_ratio){
+	$("#container").width(h/a_ratio);
+	$("#container").height(h);
+ }else{
+	$("#container").width(w);
+	$("#container").height(h);
+}
+
+//list all the JingLuos, as group of check box
+populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
+	function(e){
+		let val=e["line_name"];
+    	$('#jlCheckBox')
+        .append(`<input type="checkbox" id="${val}" name="interest" value="${val}">`)
+        .append(`<label for="${val}">${val}</label></div>`)
+        .append(`<br>`);
+	});  
+
 
 //initGlobalVars();
 setupPopup()  ;
 initPointLabels('#labels');
 init3D('#c', 30);
-loadGLTF('as_fem2.glb');
-setupPointEditor();
-setupTransformControler();
+loadGLTF('as_fem2.glb', "asian_female_teen");
+//setupPointEditor();
+//setupTransformControler();
 
 
 import {populateField, savePoint} from './XWJLdata.js';
@@ -130,12 +185,12 @@ $( "#editDialog" ).dialog({
 $("#uiLine").blur(function(){
 	//alert($(this).val());
 	let ptr, ptrList=[];
+
+	$("#jlName").text($(this).val());
+	$("#dataPtrList").empty();
 	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
 		e=>{
-			$("#jlName").text($(this).val());
-
 			//the drop down list in the pop-up
-			$("#dataPtrList").empty();
 			$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
 			//if column "coor" contains value, then create the 3D point and add to the scene.
 			if (e['coor'] != null){
@@ -235,10 +290,20 @@ function composeData() {
 	return json;
 }   
 
-
+$( window ).resize (function (){
+/******not sure if we really need that![202107.13
+console.log('c: '+ $('#c')[0].clientWidth );
+console.log('container: '+ $('#container')[0].clientWidth );
+//$('#c').width($('#container')[0].clientWidth);
+render();
+*/
+	});
 
 
 </script>
 
+
+<script>
+</script>
 </body>
 </html>

@@ -12,6 +12,9 @@ var scene, camera, renderer, canvas, raycaster, orbitCtrl, transformControl, lab
 var jlObjs = new THREE.Object3D(); 
 jlObjs.name='jingluo Objs';
 
+//keep the model object variable for easy reference. it is added to jlObjs
+var modelObj;
+
 //group points by line name 
 var ptsGroups = new THREE.Group(); //('ptr grp by JL');  //THREE.Object3D();   //{};  //   new Map();
 ptsGroups.name='ptr Groups';
@@ -30,26 +33,21 @@ function initPointLabels(elemID){
 }
 
 
-/*
-function initGlobalVars(){
-	const canvas = document.querySelector('#c');
-	const labelSize=30/canvas.clientWidth; 
-}*/
-
 
 function init3D(id, lblSize) {
-  const c = document.querySelector(id);
-//renderer = new THREE.WebGLRenderer( { antialias: true } );
- renderer = new THREE.WebGLRenderer({canvas: c});
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.toneMapping = THREE.ACESFilmicToneMapping;
-				renderer.toneMappingExposure = 1;
-				renderer.outputEncoding = THREE.sRGBEncoding;
+	const c = document.querySelector(id);
+	//renderer = new THREE.WebGLRenderer( { antialias: true } );
+	renderer = new THREE.WebGLRenderer({canvas: c});
+	renderer.setPixelRatio( window.devicePixelRatio );
+console.log("width:"+c.clientWidth);	
+	//renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( c.clientWidth, c.clientHeight );
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	renderer.toneMappingExposure = 1;
+	renderer.outputEncoding = THREE.sRGBEncoding;
  
-
-  canvas = renderer.domElement;
-  labelSize=lblSize/canvas.clientWidth;
+	canvas = renderer.domElement;
+	labelSize=lblSize/canvas.clientWidth;
 
   const fov = 45;
   const aspect = 2;  // the canvas default
@@ -98,12 +96,12 @@ function init3D(id, lblSize) {
 	  orbitCtrl.maxAzimuthAngle = Math.PI * (100 / 180);
 	orbitCtrl.damping = 0.2;
 	  //2021.06.10 animate only upon change events
-orbitCtrl.addEventListener( 'change', render );
+	orbitCtrl.addEventListener( 'change', render );
 	  
-	  orbitCtrl.update();
+	orbitCtrl.update();
   }
 
-  // the ground
+  // the ground. will very likely removed![TODO 20210710]
   {
 	  const planeSize = 40;
 	  const loader = new THREE.TextureLoader();
@@ -185,14 +183,13 @@ orbitCtrl.addEventListener( 'change', render );
   }
 }
 
-function setupPointEditor(){
-	//document.addEventListener( 'click', onMouseDown, false );
-	//renderer.domElement.addEventListener("click", onclick, true);
-	//$("#c").on( 'click', onMouseDown);  This one works!  //response to click only if it is inside the 3D view div
-	//$("#c").mousedown(e=>{    //Try. Because I need use roght mouse down event as well.
-	//$("#c").mouseup(e=>{    
-	//canvas.addEventListener('click', (e)=>{   
-	canvas.addEventListener('pointerup', (e)=>{     //""mouseup" events not working, because of the OrbitControls!
+function removeNewPointEditor(){
+	canvas.removeEventListener('pointerup', edNew);
+}
+function setupNewPointEditor(){
+	canvas.addEventListener('pointerup', edNew);
+}
+function edNew(e){     //""mouseup" events not working, because of the OrbitControls!
 		e.preventDefault();   
 		//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
 		switch (e.which){
@@ -208,7 +205,7 @@ function setupPointEditor(){
 				alert("a strange mouse event");
 			e.preventDefault();
 		}
-	}, false);
+	}; //, false);
 	//2021.05.21 seems make no sense !  document.addEventListener( 'touchstart', onDocumentTouchStart, false );   //for touch screen devices
 
 	//supporting functions
@@ -230,14 +227,13 @@ function setupPointEditor(){
 		console.log("intersected " + intersects.length);
 			
 		if(intersects.length > 0){ 
-			let child = intersects[0];		
+			let child = intersects[0];   //point at the facing object		
 			let rawName = child.object.name;
 			console.log("... " + rawName +":("+child.point.x+","+child.point.y+","+child.point.z+")");
-	//camera.lookAt(new THREE.Vector3(child.point.x,child.point.y,child.point.z));
-	//camera.lookAt(new THREE.Vector3(10,10,10));
-	orbitCtrl.target.set(0, 0, 0);
-	orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
-	orbitCtrl.update();
+			//camera.lookAt(new THREE.Vector3(child.point.x,child.point.y,child.point.z));
+			//camera.lookAt(new THREE.Vector3(10,10,10));
+			orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
+			orbitCtrl.update();
 		}
 	}
 	
@@ -250,25 +246,28 @@ function setupPointEditor(){
 		// (left, top) = (-1,-1), (right, top) = (1, -1)
 		//           (middle, middle) = (0,0)
 		// (left, bottom) = (-1,1), (right, top) = (1, 1)
-	//2021.05.22: for the purpose of development only ...
-	$("#mouseCoScreen").html("mouse(screen):"+e.clientX+","+e.clientY);	
 		let rect = renderer.domElement.getBoundingClientRect();
-	$("#renderRect").html("rect:"+rect.left+","+rect.top+","+rect.right+","+rect.bottom);	
-		mouse.x = ( ( e.clientX - rect.left ) / ( rect.width - rect.left ) ) * 2 - 1;
+		mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
 		mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-	$("#mouseCoNorm").html("mouse(rect):"+mouse.y+","+mouse.y);	
 		// ??? [2019.04.23] how about z? no effect !?  
 		//mouse.z = camera.position.z; 
 		//mouse.z = 0.5;
 		//   mouse.unproject( camera );   
 		//   mouse.normalize();
-	$("#cameraCo").html("camera:"+camera.position.x+','+camera.position.y+','+camera.position.z);	        
 		//detect the selected 3D pointer 
 		raycaster.setFromCamera(mouse,camera);
-		let intersects = raycaster.intersectObjects(jlObjs.children, true);
-		console.log("intersected " + intersects.length);
+		//let intersects = raycaster.intersectObjects(jlObjs.children, true);
+		let intersects = raycaster.intersectObjects([modelObj], true);
+		//console.log("intersected " + intersects.length);
 		//intersects.forEach((child, ndx) => {  //Respond to the first only. Otherwise, 
 		//									  //the "line" seems will have a lot ...
+/*
+	//2021.05.22: for the purpose of development only ...
+	$("#mouseCoScreen").html("mouse(screen):"+e.clientX+","+e.clientY);	
+	$("#renderRect").html("rect:"+rect.left+","+rect.top+","+rect.right+","+rect.bottom);	
+	$("#mouseCoNorm").html("mouse(rect):"+mouse.y+","+mouse.y);	
+	$("#cameraCo").html("camera:"+camera.position.x+','+camera.position.y+','+camera.position.z);	        
+
 	let intersectObjs="objs:<br>";
 	$("#intersectObjs").html(intersectObjs);
 		if(intersects.length > 0){ 
@@ -281,35 +280,31 @@ function setupPointEditor(){
 	$("#ptrX").text(child.point.x);
 	$("#ptrY").text(child.point.y);
 	$("#ptrZ").text(child.point.z);
-	$("#editDialog").dialog( "open" );
-			console.log(child.point);
-			addPointToJLObjs("lName", 'pName', child.point); //and the popup handler will persist.
-		}
-	}	
-}
-//2021.05.23 
-function addPointToJLObjs(lName, sName, x,y,z){
-	//If the point group for this JingLuo not created yet, create it. 
-	if(ptsGroups[lName] == null){
-		console.log(ptsGroups);
-		ptsGroups[lName] = new THREE.Group();
-		ptsGroups[lName].name=lName;
-		ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
-		console.log(ptsGroups);
 	}
+*/
+//TODO 2021.07.10: display the point as soon as clicked ...
+	if(intersects.length > 0){ 
+		let child = intersects[0];
+		//add a temp point to the scene, and make it visible; 
+		//But its name are to be supplied/and saved later.
+		addTempPtr(child.point); 
+		$("#editDialog").dialog( "open" );
+	}
+}	
+  
+function addTempPtr(co){
+	let grpName="temp";
+	if(ptsGroups[grpName] == null){
+		ptsGroups[grpName] = new THREE.Group();
+		ptsGroups[grpName].name=grpName;
+		ptsGroups.add(ptsGroups[grpName]);   //remember to add to ptsGroups, which is in scene
+	}
+	
+	ptsGroups[grpName].clear();
+	let pt=createPointObject("tempPtr", co, {color: 0xff0000});
+	ptsGroups[grpName].add(pt);
 
-	//console.log("point co:", ptPos);
-	let ptSph;
-	{  // the point spot
-		let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
-		let ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
-		ptSph = new THREE.Mesh( ptGeo, ptMat );
-		ptSph.position.set(x, y, z);
-		// ...
-		ptSph.name = sName; 
-	}
-	//scene.add( ptSph );   // to be displayed as 3D obj
-	ptsGroups[lName].add(ptSph);
+	render();
 }
 
 function createPoints(lName, ptrLst){
@@ -325,8 +320,8 @@ function createPoints(lName, ptrLst){
 	//console.log("point co:", ptPos);
 	ptrLst.forEach(p=>{
 		let [xwName, seq, co, isXW]=p;
-		if(isXW){
-			let ptSph;
+		//if(isXW){
+		/*	let ptSph;
 			// the point spot
 			let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
 			let ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
@@ -336,11 +331,25 @@ function createPoints(lName, ptrLst){
 			ptSph.name = xwName + seq; 
 			//scene.add( ptSph );   // to be displayed as 3D obj
 			ptsGroups[lName].add(ptSph);
-		}
+			*/
+		let pt=createPointObject(xwName +" "+seq, co, {color: 0x0000ff});
+		ptsGroups[lName].add(pt);
+		//}
 	});
 }
 
-
+function createPointObject(name, co, ptColor){
+	let ptSph;
+	// the point spot
+	let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
+	let ptMat = new THREE.MeshBasicMaterial( ptColor );
+	ptSph = new THREE.Mesh( ptGeo, ptMat );
+	ptSph.position.set(co['x'], co['y'], co['z']);
+	// ...
+	ptSph.name = name; 
+	//scene.add( ptSph );   // to be displayed as 3D obj
+	return ptSph;
+}
 
 function render() {
 	camera.aspect = canvas.clientWidth / canvas.clientHeight;
@@ -356,29 +365,25 @@ function animateJLeditor() {
 }
 
 //const roughnessMipmapper = new RoughnessMipmapper( renderer );
-function loadGLTF(gltfName){
+function loadGLTF(gltfName, modelName){
     const gltfLoader = new GLTFLoader();
-    gltfLoader.load(gltfName, 
-		(gltf) => {
+    gltfLoader.load(gltfName, (gltf) => {
 /*			//???
-			gltf.scene.traverse( function ( child ) {
+			gltf.scene.traverse( function 	( child ) {
 								if ( child.isMesh ) {
 									roughnessMipmapper.generateMipmaps( child.material );
 								}
 							} );
 */							
-let root=gltf.scene;
-    	  console.log(root.name);
-      	  //console.log(dumpObject(root).join('\n'));
-       	  //console.log(dumpObject(scene).join('\n'));
-      	  scene.add(gltf.scene); 
+		let root=gltf.scene;
+    	console.log(root.name);
+      	//console.log(dumpObject(root).join('\n'));
+       	//console.log(dumpObject(scene).join('\n'));
+      	scene.add(gltf.scene);  //TODO 20210710: seem repeat what is coming?? 
 
-      let modelObj = scene.getObjectByName("asian_female_teen", true);
-//2021.05.22 DEVEL: so users can interactively contribute ... 
-//Originally, it is not added to jlObjs because these functions are performed in Blender.
-jlObjs.add(modelObj);
-//jlObjs.add(ptsGroups); //2021.06.17 moved for clarity
-      //console.log(dumpObject(scene).join('\n'));
+		//let modelObj = scene.getObjectByName("asian_female_teen", true);
+		modelObj = scene.getObjectByName(modelName, true);
+		jlObjs.add(modelObj);
 
 	  // compute the box that contains all the stuff
 	  // from root and below
@@ -507,7 +512,7 @@ function createJL(jlName, ptrLst){
 		let points=[];
 		ptrLst.forEach((p,i)=>{
 			let [xwName, seq, co, isXW]=p;
-			if(isXW)
+			//if(isXW)
 				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
 		});
 		createCurve(points, new THREE.Vector3(0,0,0), jlName);
@@ -537,14 +542,15 @@ function createJL(jlName, ptrLst){
 
 function updateLabels() {
 	let tempLabelPos=[];
-	let tempV = new THREE.Vector3();  // is it needed?
-	//let canvas = renderer.domElement;
+	let tempV = new THREE.Vector3();  
 
 	camera.updateMatrixWorld(true, false);  //? 
  
 	 //remove all the labels
 	$('#labels').empty();
 
+	let rect = renderer.domElement.getBoundingClientRect();
+	
 	// and then add the new ones 
 	let isLblOverlap=false;
 	ptsGroups.children.forEach((child, ndx) => {
@@ -552,7 +558,7 @@ function updateLabels() {
 	    //dumpObject(child, lines, isLast, newPrefix);
 	    //console.log(child.name);
 	    child.children.forEach((ch, ix) => {
-		    console.log(ch.name + ':' + ch.position.x + ',' + ch.position.y  + ',' + ch.position.z);
+		    //console.log(ch.name + ':' + ch.position.x + ',' + ch.position.y  + ',' + ch.position.z);
 			//-------------
 		    ch.updateWorldMatrix(true, false);
 		    ch.getWorldPosition(tempV);
@@ -561,21 +567,15 @@ function updateLabels() {
 		
 		    // determine if it is between camera and the body model.
 		    raycaster.setFromCamera(tempV, camera);
-
-	      let modelObj = scene.getObjectByName("asian_female_teen", true);
+	        //let modelObj = scene.getObjectByName("asian_female_teen", true);
     		const intersectedObjects = raycaster.intersectObjects([ch, modelObj], true);
-    		// We're visible if the first intersection is this object.
+    		// This object is visible only if it is the first.
     		const show = intersectedObjects.length && ch === intersectedObjects[0].object;
- 
-			const elem = document.createElement('div');
-			elem.id = ch.name;
-			//elem.textContent = sText;
-			//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
-			elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
 
-	        ch.updateWorldMatrix(true, false);
+			//TODO: 2021.07.10 Is that needed?
+	        /*ch.updateWorldMatrix(true, false);
 	        ch.getWorldPosition(tempV);
-	        tempV.project(camera);
+	        tempV.project(camera); */
 
 			//if this one overlaps existing one, 
 			for (const e of tempLabelPos){
@@ -588,13 +588,20 @@ function updateLabels() {
 			   		break;
 			   	};
 			}
+			//create and show it only if not overlaped
 			if(!isLblOverlap){ 
 			   	tempLabelPos.push([tempV.x, tempV.y]);
-		        const x = (tempV.x * .5 + .5) * canvas.clientWidth;
-		        const y = (tempV.y * -.5 + .5) * canvas.clientHeight;
-			    console.log('coord:', x, y);
-				//if this label overlap others, don't show
+		        const x = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+		        const y = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
+			    //console.log('coord:', x, y);
 			    
+			//create an HTML element for it 
+			const elem = document.createElement('div');
+			elem.id = ch.name;
+			//elem.textContent = sText;
+			//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
+			elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
+
 		        elem.style.display = '';
 		        // get the note coordinate
 			
@@ -612,14 +619,21 @@ function updateLabels() {
 		});	 
 	});
 }
-
-
+//2021.07.12--------------
+function removeStickModifier(){
+	console.log("TODO ...");
+	//scene.remove(transformControl);
+}
+//https://threejs.org/examples/webgl_geometry_spline_editor.html
+function setupStickModifier(){
+	console.log("TODO ...");
+}
 //2021.06.15--------------
-function removeTransformControler(){
+function removeFreeModifier(){
 	scene.remove(transformControl);
 }
 //https://threejs.org/examples/webgl_geometry_spline_editor.html
-function setupTransformControler(){
+function setupFreeModifier(){
 	//let canvas = renderer.domElement;
 	transformControl = new TransformControls( camera, canvas );
 	transformControl.setSize(0.5);
@@ -664,6 +678,7 @@ function setupTransformControler(){
 	
 		raycaster.setFromCamera(mouse,camera);
 		let jlPtrs = jlObjs.getObjectByName( activeJL );
+//TODO: 20210710  need to limit only to the needed objects!  
 		let intersects = raycaster.intersectObjects(jlPtrs.children, true);
 	
 	//console.log("onPointerMove(), points: " + ptsGroups.children);
@@ -679,7 +694,7 @@ function setupTransformControler(){
 			transformControl.detach();
 		}*/
 	}
-	
+//TODO 20210710: not needed?	
 	function addPoint() {
 		splinePointsLength ++;
 	
@@ -687,6 +702,7 @@ function setupTransformControler(){
 		updateSplineOutline();
 	}
 	
+//TODO 20210710: not needed?	
 	function removePoint() {
 		if ( splinePointsLength <= 4 ) {
 			return;
@@ -704,6 +720,7 @@ function setupTransformControler(){
 		updateSplineOutline();
 	}
 	
+//TODO 20210710: not needed?	
 	function updateSplineOutline() {
 		for ( const k in splines ) {
 			const spline = splines[ k ];
@@ -726,6 +743,9 @@ function hookupTransformControler(jl){
 }
 
 export {labelSize, renderer, init3D, loadGLTF, render,createPoints, createJL, 
-setupTransformControler, hookupTransformControler, removeTransformControler, setupPointEditor,
+hookupTransformControler, 
+setupFreeModifier, removeFreeModifier, 
+setupStickModifier, removeStickModifier,
+setupNewPointEditor, removeNewPointEditor, 
 initPointLabels, animateJLeditor};
 //export {canvas, camera, scene, renderer, CameraCtrl, labelSize, initGlobalVars};
