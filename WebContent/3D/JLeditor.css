@@ -4,11 +4,7 @@ html, body {
         height: 100%;
     }
 
-#modelCtrl {
-position: absolute;  
-   top:0;left:0;
-   height: 20px;
-}
+
 #container {
 	display:inline-block;
     width:100%;
@@ -85,12 +81,3 @@ div#labels div:hover {
 
 
 
-#debug {
-  position: absolute;
-  left: 1em;
-  top: 1em;
-  padding: 1em;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-family: monospace;
-}

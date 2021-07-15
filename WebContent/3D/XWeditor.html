@@ -23,8 +23,7 @@
 <form id=f1>
   <p>
   <span id="ptrX"></span>,<span id="ptrY"></span><span id="ptrZ"></span><br>
-    Line: <input list="dataLineList" id="uiLine" name="uiLine" />
-	<datalist id="dataLineList"></datalist>
+  Line: <span id="uiLine"></span> 
   <br>
   Point: <input list="dataPtrList" id="uiPoint" name="uiPoint" />
 	<datalist id="dataPtrList"></datalist>
@@ -43,17 +42,7 @@
 <div style="display:flex">
 	<div id="jlCheckBox" style="width:120px"></div>
 	<div id="container" class="container" style="float:left">
-		<div style="position:relative;top:0; left:0;z-index:1">
-			<div id="modelCtrl" style="position:relative;float:left"></div>
-			<div id="debug">
-	  			<div id="mouseCoScreen"></div>
-	  			<div id="renderRect"></div>
-	  			<div id="mouseCoNorm"></div>
-	  			<div id="cameraCo"></div>
-	  			<div id="intersectObjs"></div>
-	  		</div>
-	  	</div>	
-		<div id="xx"  style="background:black; color:white">
+		<div id="xx"  style="postition:relative;background:black; color:white">
 			<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
 			<span id="jlName"></span>
 			<!-- button id="hookupTransformCtrl">Hookup Transform Controller</button   -->
@@ -63,6 +52,17 @@
 		</div>
 
 		<canvas id="c"></canvas>
+
+		<div style="width:100%;display:flex;flex-direction: row">
+			<div id="modelCtrl" style="position:relative;float:left"></div>
+			<div id="debug" style="position:relative;float:left;width:auto;font-family: monospace;background: rgba(0, 0, 0, 0.8);color: white;flex-grow:1;"> devl. info
+	  			<div id="mouseCoScreen"></div>
+	  			<div id="renderRect"></div>
+	  			<div id="mouseCoNorm"></div>
+	  			<div id="cameraCo"></div>
+	  			<div id="intersectObjs"></div>
+		  	</div>	
+		</div>
 	    <div id="labels"></div>
     </div>
 </div>
@@ -74,7 +74,7 @@
 //import * as THREE from './threejs/build/three.module.js'
 
 import {init3D, loadGLTF, render, createPoints, createJL, 
-	hookupTransformControler, 
+	hookupTransformControler, clearGroup,
 	setupFreeModifier, removeFreeModifier, 
 	setupStickModifier, removeStickModifier, 
 	setupNewPointEditor, removeNewPointEditor,
@@ -85,6 +85,10 @@ import {init3D, loadGLTF, render, createPoints, createJL,
 //	});
 
  $('#newEdMode').on('change', function() {
+	if($("#jlName").text()==""){
+		alert("select a JL first");
+		return;
+	}
 	if(this.checked) {
 //alert("is it working");
 		setupNewPointEditor();
@@ -133,11 +137,45 @@ populateField("http://localhost:8080/zyzySvc/JL/getJLs",
 	function(e){
 		let val=e["line_name"];
     	$('#jlCheckBox')
-        .append(`<input type="checkbox" id="${val}" name="interest" value="${val}">`)
-        .append(`<label for="${val}">${val}</label></div>`)
+        .append(`<input type="radio" id="${val}" class="chkJLname" name="name" value="${val}">`)
+        .append(`<label for="${val}">${val}</label>`)
         .append(`<br>`);
 	});  
+//... and the click event handler
+$('.chkJLname').click(function(e){
+  var val = $(this).val();
+  //alert(val);
 
+  $("#jlName").text(val);
+
+  //setup JL line name in the popup 
+  $("#uiLine").text(val); 
+  $("#uiPoint").val("");
+
+  $("#dataPtrList").empty();
+
+  //load XueWei and JL into 3D
+  loadJL(val);
+	
+  render();
+});
+
+function loadJL(name){
+  let ptr, ptrList=[];
+  populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+name, 
+	e=>{
+		//the drop down list in the pop-up
+		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
+		//if column "coor" contains value, then create the 3D point and add to the scene.
+		if (e['coor'] != null){
+			ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
+		}
+	});
+	//remove all XueWei and JL objects, and working on the currently selected:
+	clearGroup(name);
+	createPoints(name, ptrList);
+	createJL(name, ptrList);
+}
 
 //initGlobalVars();
 setupPopup()  ;
@@ -178,34 +216,17 @@ $( "#editDialog" ).dialog({
 			$('#uiLine').text("");
 			$('#uiPoint').text("");
 			$('#uiSeq').text("");
+
+			//reload the current JingLuo to include the newly added point
+			loadJL($("#jlName").text());
+			render();
      	}
 	}
 });
 //popup form field event hanlers
-$("#uiLine").blur(function(){
-	//alert($(this).val());
-	let ptr, ptrList=[];
-
-	$("#jlName").text($(this).val());
-	$("#dataPtrList").empty();
-	populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+$(this).val(), 
-		e=>{
-			//the drop down list in the pop-up
-			$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
-			//if column "coor" contains value, then create the 3D point and add to the scene.
-			if (e['coor'] != null){
-				//ptr = new THREE.Vector3(e['coor']['x'], e['coor']['y'], e['coor']['z']);
-//2021.06.24 ...
-				//addPointToJLObjs(e["line_name"], e["name"], e['coor']['x'], e['coor']['y'], e['coor']['z']);
-				ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
-			}
-		});
-	createPoints($(this).val(), ptrList);
-	createJL($(this).val(), ptrList);
-});
 $("#uiPoint").blur(function(){
 	//alert($(this).val());
-	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#uiLine").val() +"/"+$(this).val(), 
+	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#uiLine").text() +"/"+$(this).val(), 
 		e=>{$("#uiSeq").val(e["seq"]);
 			$("#xpond").text(e["name_explained"]);
 			$("#apps").text(e["applications"]);
@@ -274,7 +295,7 @@ function composeData() {
 	//alert($('#selRelation option:selected').val());
 	var strRslt, rsltObj;
 	rsltObj = {
-		line_name:	$('#uiLine').val(),
+		line_name:	$('#uiLine').text(),
 		name:	$('#uiPoint').val(),
 		seq:	$('#uiSeq').val(),
 		x:	$('#ptrX').text(),

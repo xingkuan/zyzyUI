@@ -23,7 +23,7 @@ jlObjs.add(ptsGroups);
 
 //particle systems for simulating flow.
 var ptrObjs = new THREE.Object3D();  
-ptrObjs.name='xxx';
+ptrObjs.name='particles';
 
 //try use 2D HTML div for labeling (instead of Sprite) 
 function initPointLabels(elemID){
@@ -93,7 +93,7 @@ console.log("width:"+c.clientWidth);
 	  //CameraCtrl.maxPolarAngle = Math.PI/2; //Math.PI;
 	  // left and right rotation range
 	  orbitCtrl.minAzimuthAngle = -Math.PI * (100 / 180);
-	  orbitCtrl.maxAzimuthAngle = Math.PI * (100 / 180);
+	 // orbitCtrl.maxAzimuthAngle = Math.PI * (100 / 180);
 	orbitCtrl.damping = 0.2;
 	  //2021.06.10 animate only upon change events
 	orbitCtrl.addEventListener( 'change', render );
@@ -276,10 +276,6 @@ function edNew(e){     //""mouseup" events not working, because of the OrbitCont
 			console.log("... " + rawName);
 	intersectObjs=intersectObjs+rawName+":("+child.point.x+","+child.point.y+","+child.point.z+")";
 	$("#intersectObjs").html(intersectObjs);
-	$("#container").attr('disabled','disabled');
-	$("#ptrX").text(child.point.x);
-	$("#ptrY").text(child.point.y);
-	$("#ptrZ").text(child.point.z);
 	}
 */
 //TODO 2021.07.10: display the point as soon as clicked ...
@@ -288,6 +284,13 @@ function edNew(e){     //""mouseup" events not working, because of the OrbitCont
 		//add a temp point to the scene, and make it visible; 
 		//But its name are to be supplied/and saved later.
 		addTempPtr(child.point); 
+
+		$("#container").attr('disabled','disabled');
+		$("#ptrX").text(child.point.x);
+		$("#ptrY").text(child.point.y);
+		$("#ptrZ").text(child.point.z);
+
+		$("#uiPoint").val("");
 		$("#editDialog").dialog( "open" );
 	}
 }	
@@ -535,10 +538,17 @@ function createJL(jlName, ptrLst){
 		curveObject.position.set(loc.x, loc.y, loc.z);
 		//curveObject.name=lname;
 		curveObject.name=nm;
-		jlObjs.add(curveObject);
+		//DOING 2021.07.14 ]can i just add to
+		//jlObjs.add(curveObject);
+		ptsGroups[nm].add(curveObject) 
 	}		
 }
 
+function clearGroup(name){
+	//if (ptsGroups[name])
+	//	ptsGroups[name].clear();
+	ptsGroups.clear();
+}
 
 function updateLabels() {
 	let tempLabelPos=[];
@@ -572,50 +582,46 @@ function updateLabels() {
     		// This object is visible only if it is the first.
     		const show = intersectedObjects.length && ch === intersectedObjects[0].object;
 
-			//TODO: 2021.07.10 Is that needed?
-	        /*ch.updateWorldMatrix(true, false);
-	        ch.getWorldPosition(tempV);
-	        tempV.project(camera); */
-
-			//if this one overlaps existing one, 
-			for (const e of tempLabelPos){
-			  	//console.log(ch.name, Math.abs(e[0]-tempV.x), Math.abs(e[1]-tempV.y));
-			
-			   	isLblOverlap=false;
-			   	if((Math.abs(e[0]-tempV.x) < labelSize)&&(Math.abs(e[1]-tempV.y) < labelSize)){
-					console.log("skip");
-					isLblOverlap=true;
-			   		break;
-			   	};
+			if(show){
+				//if this one overlaps existing one, 
+				for (const e of tempLabelPos){
+				  	//console.log(ch.name, Math.abs(e[0]-tempV.x), Math.abs(e[1]-tempV.y));
+				
+				   	isLblOverlap=false;
+				   	if((Math.abs(e[0]-tempV.x) < labelSize)&&(Math.abs(e[1]-tempV.y) < labelSize)){
+						//console.log("skip");
+						isLblOverlap=true;
+				   		break;
+				   	};
+				}
+				//create and show it only if not overlaped
+				if(!isLblOverlap){ 
+				   	tempLabelPos.push([tempV.x, tempV.y]);
+			        const x = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+			        const y = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
+				    //console.log('coord:', x, y);
+				    
+					//create an HTML element for it 
+					const elem = document.createElement('div');
+					elem.id = ch.name;
+					//elem.textContent = sText;
+					//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
+					elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
+	
+			        elem.style.display = '';
+			        // get the note coordinate
+				
+			        // move the elem to that position
+			        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+			        elem.style.transform = `translate(${x}px,${y}px)`;
+			        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
+					 
+			        // set the zIndex for sorting
+			        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
+				
+					labelContainer.appendChild(elem);
+				}
 			}
-			//create and show it only if not overlaped
-			if(!isLblOverlap){ 
-			   	tempLabelPos.push([tempV.x, tempV.y]);
-		        const x = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
-		        const y = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
-			    //console.log('coord:', x, y);
-			    
-			//create an HTML element for it 
-			const elem = document.createElement('div');
-			elem.id = ch.name;
-			//elem.textContent = sText;
-			//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
-			elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
-
-		        elem.style.display = '';
-		        // get the note coordinate
-			
-		        // move the elem to that position
-		        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
-		        elem.style.transform = `translate(${x}px,${y}px)`;
-		        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
-				 
-		        // set the zIndex for sorting
-		        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
-			
-				labelContainer.appendChild(elem);
-			}
-			//--------------
 		});	 
 	});
 }
@@ -743,7 +749,8 @@ function hookupTransformControler(jl){
 }
 
 export {labelSize, renderer, init3D, loadGLTF, render,createPoints, createJL, 
-hookupTransformControler, 
+hookupTransformControler,
+clearGroup, 
 setupFreeModifier, removeFreeModifier, 
 setupStickModifier, removeStickModifier,
 setupNewPointEditor, removeNewPointEditor, 
