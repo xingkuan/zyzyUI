@@ -124,7 +124,6 @@ console.log("width:"+c.clientWidth);
   }
   //add the jingluo object to the scene
   scene.add(jlObjs);
-//2021.06.17 enable it later.  scene.add(ptrObjs);
 
   //testing transparency
   /*{
@@ -362,9 +361,14 @@ function render() {
 	updateLabels();
 }
 
-function animateJLeditor() {
+var animationId;
+function startAnimation() {
+	updateParticles();
 	render();
-	requestAnimationFrame( animate );
+	animationId=requestAnimationFrame( startAnimation );
+}
+function stopAnimation() {
+	cancelAnimationFrame(animationId);
 }
 
 //const roughnessMipmapper = new RoughnessMipmapper( renderer );
@@ -540,8 +544,121 @@ function createJL(jlName, ptrLst){
 		curveObject.name=nm;
 		//DOING 2021.07.14 ]can i just add to
 		//jlObjs.add(curveObject);
-		ptsGroups[nm].add(curveObject) 
+		ptsGroups[nm].add(curveObject) ;
 	}		
+}
+
+function createJLParticles(jlName, ptrLst, color, size){
+	let points=[];
+	if(ptrLst.length>1){
+		ptrLst.forEach((p,i)=>{
+			let [xwName, seq, co, isXW]=p;
+			//if(isXW)
+				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
+		});
+	}
+
+	let curve = new THREE.CatmullRomCurve3(points, false);  
+		//curve.curveType = "centripetal";
+		//curve.closed = false;
+		
+	//TODO20210716: may use length to decide how many points
+	let len=curve.getLength();
+	$("#curvLen").html("length:"+len);
+	let numPts=25;
+		
+		const ps = curve.getSpacedPoints(numPts);   //20210715: TODO: number of points may better be a parameter.
+
+	let pArray=[], cArray=[], sArray=[], idArray=[], i=0.0;
+	ps.forEach(p=> {
+            pArray.push(p.x,p.y,p.z);
+			//cArray.push( color.r, color.g, color.b, 0.5 );  //20210719: Let's make color uniform'
+			sArray.push( size );    //Different point can have different size
+			idArray.push (i);       //create sequence id; to be used for animate flowing by verying blrightness of partices
+			i += 1.0;
+        } );
+	drawParticles(jlName,   
+            		pArray,  
+            		cArray, 
+            		sArray,
+					idArray);	
+
+	function drawParticles(lName, pArray, cArray, sArray, idArray ){
+	//let  uniforms = {    
+	//		texture: { value: new THREE.TextureLoader().load( "particle.png" ) },
+	//		del: 	 { type: "f", value: 0.9 }
+	//};
+		let parMaterial = new THREE.ShaderMaterial( {
+			extensions: {
+				derivatives: "#extension GL_OES_standar_derivatives:enable"
+			},
+			uniforms: {    //uniforms,
+			    color: {type: 'vec4', value: new THREE.Vector4(color.r, color.g, color.b, 0.5)},
+			    tick: { type: 'f', value: 2. },
+			    cycles: { type: 'f', value: 4. },   //light every 4th point, and cycle through to simulate flowing.
+				resulution:{value: new THREE.Vector4()},
+			},
+	 		//vertexShader: document.getElementById( 'pvshader' ).textContent,
+			//fragmentShader: document.getElementById( 'pfshader' ).textContent,
+	 		vertexShader: document.getElementById( 'vertexShader' ).textContent,  
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent, 
+	        blending: THREE.AdditiveBlending,
+	        //depthWrite: false,  //?
+	        //
+	        //So first of all, what is depth test? Suppose if you are to draw 2 identical shapes directly in front of you but of different distance to you. In real life, you expect to only see the shape that is closer to you, correct?
+			//Well if you were to try to do this without a depth test, you will only get the desired effect half the time: if the distant object is drawn before the closer object, no problem, same as real life; but if the closer object is drawn before the distance object, oh-oh, the distant object is visible when it should be not. Problematic.
+			//Depth test is a tool built in today's GPUs to allow to get the desired draw output regardless of the order which the objects are drawn. 
+	        //
+	        //transparent: true,  // so it can show throug even if it is under the skin.
+	        //vertexColors: true
+		} );
+
+//const parMaterial = new THREE.PointsMaterial( { color: 0x888888 } );
+
+		let parGeo = new THREE.BufferGeometry();
+		//for each point, set the properties, and pass to GSLS script
+	    parGeo.setAttribute( 'position', new THREE.Float32BufferAttribute(pArray,3) );
+	    //parGeo.setAttribute( 'positionN', new THREE.Float32BufferAttribute([0,0,0],3) );
+	    //parGeo.setAttribute( 'color', new THREE.Float32BufferAttribute(cArray,3 ));   //20210719: All points have same color, from uniform.
+	    parGeo.setAttribute( 'size', new THREE.Float32BufferAttribute(sArray,1 ) );  
+	    parGeo.setAttribute( 'id', new THREE.Float32BufferAttribute(idArray,1 ) );  
+	    
+	    /*let */parSys = new THREE.Points( parGeo, parMaterial );
+	    parSys.name=lName;
+	    //parSys.position.set(pts.position.x,pts.position.y,pts.position.z);
+	    parSys.sortParticles = false;
+	    parSys.dynamic = true;
+	    //ptrObjs.add(parSys);
+		ptsGroups[lName].add(parSys) 
+		//scene.add(parSys) 
+	}
+}    
+var parSys;
+var del=0;
+function updateParticles(){ 
+	if (del==3.){
+		del=0.;
+	}else{
+		del=(del+1.);
+	}
+	/*ptrObjs.children.forEach((child, ndx) => {
+		child.material.uniforms.del.value=del * 0.3;
+		child.needsUpdate = true;
+	})*/
+	//ptsGroups[lName].add(parSys)
+	ptsGroups.children.forEach(e=>{
+		let pSys=e.getObjectByProperty("type", "Points");  //each JL has only one particle sys.
+		/*del = pSys.material.uniforms.tick.value;
+		if (del==4.){
+			del=0.;
+		}else{
+			del=(del+1.);
+		}*/
+		pSys.material.uniforms.tick.value = del;
+		pSys.needsUpdate = true;
+	});
+	
+	//parSys.needsUpdate = true;
 }
 
 function clearGroup(name){
@@ -748,11 +865,32 @@ function hookupTransformControler(jl){
 	activeJL = jl;
 }
 
+
+
+  
+/*2021.06.16  This is certainly not doing anything !!!
+function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+}
+
+*/
+
+
+
+
+
 export {labelSize, renderer, init3D, loadGLTF, render,createPoints, createJL, 
-hookupTransformControler,
-clearGroup, 
+hookupTransformControler, createJLParticles,
+clearGroup, updateParticles,
 setupFreeModifier, removeFreeModifier, 
 setupStickModifier, removeStickModifier,
 setupNewPointEditor, removeNewPointEditor, 
-initPointLabels, animateJLeditor};
+initPointLabels, startAnimation, stopAnimation};
 //export {canvas, camera, scene, renderer, CameraCtrl, labelSize, initGlobalVars};

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>3D JL sys</title>
+</head>
+
+<link href = "../jquery/jquery-ui.css" rel = "stylesheet">
+<link href = "JLeditor.css" rel = "stylesheet">
+<script src="javascripts/dat.gui.min.js"></script>
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../jquery/jquery-ui.js"></script>
+
+<style>
+
+</style>
+
+
+<body">
+
+<div style="display:flex">
+	<div id="jlCheckBox" style="width:120px"></div>
+	<div id="container" class="container" style="float:left">
+		<div id="xx"  style="postition:relative;background:black; color:white">
+			<button id="btnAnimation"></button>
+		</div>
+		
+		<canvas id="c"></canvas>
+
+		<div style="width:100%;display:flex;flex-direction: row">
+			<div id="modelCtrl" style="position:relative;float:left"></div>
+			<div id="debug" style="position:relative;float:left;width:auto;font-family: monospace;background: rgba(0, 0, 0, 0.8);color: white;flex-grow:1;"> devl. info
+	  			<div id="curvLen"></div>
+		  	</div>	
+		</div>
+	    <div id="labels"></div>
+    </div>
+</div>
+
+<div id="dummyCanvas" width="64" height="64"></canvas>
+
+
+<script type="module">
+//import * as THREE from './threejs/build/three.module.js'
+import {populateField} from './XWJLdata.js';
+import {init3D, loadGLTF, render, createPoints, createJL, createJLParticles, 
+	hookupTransformControler, clearGroup, updateParticles,
+	setupFreeModifier, removeFreeModifier, 
+	setupStickModifier, removeStickModifier, 
+	setupNewPointEditor, removeNewPointEditor,
+	initPointLabels, startAnimation, stopAnimation} from './editorGlobals.js';
+
+//size container properly: 
+let a_ratio=1.5;
+let w=$(window).width();
+let h=$(window).height();
+if(w>h/a_ratio){
+	$("#container").width(h/a_ratio);
+	$("#container").height(h);
+ }else{
+	$("#container").width(w);
+	$("#container").height(h);
+}
+
+$("#btnAnimation").click( (e) => {
+	//Prevent the button from being clicked.
+  	e.preventDefault();
+	animation($("#btnAnimation").text());
+});
+//set the initial state to 
+animation("stop");
+function animation(tgt){
+	if(tgt.includes("start")){
+		startAnimation();
+		//Label the button as "stop it ..."
+		$("#btnAnimation").text("stop animation");
+	}else if(tgt.includes("stop")){
+		stopAnimation();
+		//Label the button as "start it ..."
+		$("#btnAnimation").text("start animation");
+	}
+}
+
+//list all the JingLuos, as group of check box
+populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
+	function(e){
+		let val=e["line_name"];
+    	$('#jlCheckBox')
+        .append(`<input type="radio" id="${val}" class="chkJLname" name="name" value="${val}">`)
+        .append(`<label for="${val}">${val}</label>`)
+        .append(`<br>`);
+	});  
+//... and the click event handler
+$('.chkJLname').click(function(e){
+  var val = $(this).val();
+  //alert(val);
+
+  $("#jlName").text(val);
+
+  //setup JL line name in the popup 
+  $("#uiLine").text(val); 
+  $("#uiPoint").val("");
+
+  $("#dataPtrList").empty();
+
+  //load XueWei and JL into 3D
+  loadJL(val);
+  updateParticles();
+  render();
+});
+
+function loadJL(name){
+  let ptr, ptrList=[];
+  populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+name, 
+	e=>{
+		//the drop down list in the pop-up
+		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
+		//if column "coor" contains value, then create the 3D point and add to the scene.
+		if (e['coor'] != null){
+			ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
+		}
+	});
+	//remove all XueWei and JL objects, and working on the currently selected:
+	clearGroup(name);
+	createPoints(name, ptrList);
+	//createJL(name, ptrList);
+	createJLParticles(name, ptrList, {r:0,g:250,b:0} , 3.0);
+}
+;
+
+initPointLabels('#labels');
+init3D('#c', 30);
+loadGLTF('as_fem2.glb', "asian_female_teen");
+
+
+
+$( window ).resize (function (){
+/******not sure if we really need that![202107.13
+console.log('c: '+ $('#c')[0].clientWidth );
+console.log('container: '+ $('#container')[0].clientWidth );
+//$('#c').width($('#container')[0].clientWidth);
+render();
+*/
+	});
+
+
+</script>
+
+<script type="x-shader/x-vertex" id="vertexShader">
+  attribute float size;
+  attribute float id;
+varying float tId;
+  //varying vec4 tColor;    //receiving from javascript and pass to fragmentShader. [2]210719:use uniform instead
+  void main() 
+  {
+    //vUv = position; 
+    //Every vertex shader must eventually set 'gl_Position'
+    //And in this case, we multiply the vertex position with the camera view and screen matrix to get the final output.
+    gl_PointSize = size;  //passed in from javascript
+    tId=id;   //pass to fragmentShader
+    //gl_PointSize = 5.0;  //passed in from javascript
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+   }
+</script>
+<script type="x-shader/x-fragment" id="fragmentShader">
+  uniform vec4 color;
+  //varying vec3 vUv;
+  varying float tId;
+  uniform float cycles;
+  uniform float tick;
+  void main() 
+  {
+    //Just as vertex shader, fragment shader must in the end set this variable (gl_FragColor)
+    //gl_FragColor = ;   //R,G,B,A
+    //gl_FragColor = color;
+	if(mod(tId, cycles) == tick){
+//	if(1 == 0){
+//	if(mod(8.,4.) == 0.){  //if(8.%4. == 0){
+	    gl_FragColor = color;
+	} else {
+	    gl_FragColor = vec4(0.0,0.0,0.0,0.0);
+//gl_FragColor = color;
+	}
+  }
+</script>
+
+</body>
+</html>
