@@ -362,9 +362,21 @@ function render() {
 }
 
 var animationId;
+var fps = 2;
+var interval = 1000/fps;
+var now;
+var then = Date.now();
+var delta;
 function startAnimation() {
-	updateParticles();
-	render();
+	now = Date.now();
+	delta = now - then;
+//console.log(delta);
+	if (delta > interval) {
+		then = now;
+		
+		updateParticles();
+		render();
+	}
 	animationId=requestAnimationFrame( startAnimation );
 }
 function stopAnimation() {
@@ -567,7 +579,7 @@ function createJLParticles(jlName, ptrLst, color, size){
 	$("#curvLen").html("length:"+len);
 	let numPts=25;
 		
-		const ps = curve.getSpacedPoints(numPts);   //20210715: TODO: number of points may better be a parameter.
+	const ps = curve.getSpacedPoints(numPts);   //20210715: TODO: number of points may better be a parameter.
 
 	let pArray=[], cArray=[], sArray=[], idArray=[], i=0.0;
 	ps.forEach(p=> {
@@ -634,13 +646,13 @@ function createJLParticles(jlName, ptrLst, color, size){
 	}
 }    
 var parSys;
-var del=0;
 function updateParticles(){ 
-	if (del==3.){
+/*	if (del==3.){
 		del=0.;
 	}else{
 		del=(del+1.);
 	}
+	*/
 	/*ptrObjs.children.forEach((child, ndx) => {
 		child.material.uniforms.del.value=del * 0.3;
 		child.needsUpdate = true;
@@ -648,12 +660,12 @@ function updateParticles(){
 	//ptsGroups[lName].add(parSys)
 	ptsGroups.children.forEach(e=>{
 		let pSys=e.getObjectByProperty("type", "Points");  //each JL has only one particle sys.
-		/*del = pSys.material.uniforms.tick.value;
-		if (del==4.){
+		let del = pSys.material.uniforms.tick.value;
+		if (del==3.){
 			del=0.;
 		}else{
 			del=(del+1.);
-		}*/
+		}
 		pSys.material.uniforms.tick.value = del;
 		pSys.needsUpdate = true;
 	});
