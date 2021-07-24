@@ -284,6 +284,7 @@ function edNew(e){     //""mouseup" events not working, because of the OrbitCont
 		//But its name are to be supplied/and saved later.
 		addTempPtr(child.point); 
 
+		$("#uiLine").text($("#jlName").text());  
 		$("#container").attr('disabled','disabled');
 		$("#ptrX").text(child.point.x);
 		$("#ptrY").text(child.point.y);
@@ -295,16 +296,17 @@ function edNew(e){     //""mouseup" events not working, because of the OrbitCont
 }	
   
 function addTempPtr(co){
-	let grpName="temp";
-	if(ptsGroups[grpName] == null){
+	let grpName="tempPtrGrp";
+	if(ptsGroups.getObjectByName(grpName) == null){  
 		ptsGroups[grpName] = new THREE.Group();
 		ptsGroups[grpName].name=grpName;
 		ptsGroups.add(ptsGroups[grpName]);   //remember to add to ptsGroups, which is in scene
 	}
 	
-	ptsGroups[grpName].clear();
+	let tmpPtrGrp=ptsGroups.getObjectByName(grpName);
+	tmpPtrGrp.clear();
 	let pt=createPointObject("tempPtr", co, {color: 0xff0000});
-	ptsGroups[grpName].add(pt);
+	tmpPtrGrp.add(pt);
 
 	render();
 }

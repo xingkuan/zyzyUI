@@ -141,18 +141,14 @@ populateField("http://localhost:8080/zyzySvc/JL/getJLs",
         .append(`<label for="${val}">${val}</label>`)
         .append(`<br>`);
 	});  
-//... and the click event handler
+//... and the click event handler for the check boxs:
 $('.chkJLname').click(function(e){
   var val = $(this).val();
-  //alert(val);
-
   $("#jlName").text(val);
 
   //setup JL line name in the popup 
   $("#uiLine").text(val); 
   $("#uiPoint").val("");
-
-  $("#dataPtrList").empty();
 
   //load XueWei and JL into 3D
   loadJL(val);
@@ -162,15 +158,20 @@ $('.chkJLname').click(function(e){
 
 function loadJL(name){
   let ptr, ptrList=[];
+  //first empty out the dropdown options:
+  $("#dataPtrList").empty();
+
   populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+name, 
 	e=>{
 		//the drop down list in the pop-up
+console.log(e["name"]);
 		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
 		//if column "coor" contains value, then create the 3D point and add to the scene.
 		if (e['coor'] != null){
 			ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
 		}
 	});
+
 	//remove all XueWei and JL objects, and working on the currently selected:
 	clearGroup(name);
 	createPoints(name, ptrList);
@@ -226,7 +227,7 @@ $( "#editDialog" ).dialog({
 //popup form field event hanlers
 $("#uiPoint").blur(function(){
 	//alert($(this).val());
-	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#uiLine").text() +"/"+$(this).val(), 
+	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#jlName").text() +"/"+$(this).val(), 
 		e=>{$("#uiSeq").val(e["seq"]);
 			$("#xpond").text(e["name_explained"]);
 			$("#apps").text(e["applications"]);
@@ -234,12 +235,14 @@ $("#uiPoint").blur(function(){
 		});
 });
 
-populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
-		function(e){
-			//populate the dropdown list
-			$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
-			//add 3D points to the 3D model
-		});  
+//
+//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
+//		function(e){
+//			//populate the dropdown list
+//			$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
+//			//add 3D points to the 3D model
+//		});  
+//
 };  //end setupPopup()
 
 ////////////////////
@@ -295,7 +298,7 @@ function composeData() {
 	//alert($('#selRelation option:selected').val());
 	var strRslt, rsltObj;
 	rsltObj = {
-		line_name:	$('#uiLine').text(),
+		line_name:	$("#jlName").text(),  //$('#uiLine').text(),
 		name:	$('#uiPoint').val(),
 		seq:	$('#uiSeq').val(),
 		x:	$('#ptrX').text(),
