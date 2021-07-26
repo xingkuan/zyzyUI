@@ -46,9 +46,10 @@
 			<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
 			<span id="jlName"></span>
 			<!-- button id="hookupTransformCtrl">Hookup Transform Controller</button   -->
-			<input type="checkbox" id="newEdMode"/><span id="lblNewEdMode">new</span> 
-			<input type="checkbox" id="stickMdMode"/><span id="lblStickMdMode">mod s.</span> 
-			<input type="checkbox" id="freeMdMode"/><span id="lblFreeMdMode">mod f.</span> 
+			<input type="radio" class="edMode" id="edNone" name="edMode" value="none" checked><label for="edMode">none</label> 
+			<input type="radio" class="edMode" id="edNew" name="edMode" value="new"><label for="edMode">new</label> 
+			<input type="radio" class="edMode" id="edSMove" name="edMode" value="sticky modifier"><label for="edMode">mod s.</label> 
+			<input type="radio" class="edMode" id="edFMove" name="edMode" value="free modifier"><label for="edMode">mod f.</label> 
 		</div>
 
 		<canvas id="c"></canvas>
@@ -75,50 +76,18 @@
 
 import {init3D, loadGLTF, render, createPoints, createJL, 
 	hookupTransformControler, clearGroup,
-	setupFreeModifier, removeFreeModifier, 
-	setupStickModifier, removeStickModifier, 
-	setupNewPointEditor, removeNewPointEditor,
+	removeNewPointEditor,
+	setupClickHandler,
 	initPointLabels} from './editorGlobals.js';
 
 //$("#hookupTransformCtrl").click( e=> {
 //	hookupTransformControler($("#jlName").text());
 //	});
-
- $('#newEdMode').on('change', function() {
-	if($("#jlName").text()==""){
-		alert("select a JL first");
-		return;
-	}
-	if(this.checked) {
-//alert("is it working");
-		setupNewPointEditor();
-	}else{
-		removeNewPointEditor();
-	}
+$('.edMode').click(function(e){
+  var val = $(this).val();
+  //alert(val);
+  setupClickHandler(val);
 });
- $('#stickMdMode').on('change', function() {
-	if(this.checked) {
-		setupStickModifier();
-	}else{
-		removeStickModifier();
-	}
-});
- $('#freeMdMode').on('change', function() {
-	if(this.checked) {
-		//hookupTransformControler($("#jlName").text());
-		setupFreeModifier();
-	}else{
-		removeFreeModifier();
-	}
-});
-
-//setup the 'JLnames'. When selected, the path of the JingLuo will be created and added to the scene.  
-//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
-//	function(e){
-//		//populate the dropdown list
-//		$("#JLnames").append($("<option>"+e["line_name"]+"</option>").attr("value", e["line_name"]));
-//	}
-//);  
 
 //size container properly: 
 let a_ratio=1.5;
@@ -185,6 +154,8 @@ init3D('#c', 30);
 loadGLTF('as_fem2.glb', "asian_female_teen");
 //setupPointEditor();
 //setupTransformControler();
+//...and set the initial to none:
+setupClickHandler('none'); 
 
 
 import {populateField, savePoint} from './XWJLdata.js';

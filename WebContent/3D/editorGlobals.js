@@ -141,41 +141,15 @@ console.log("width:"+c.clientWidth);
   scene.add( cube ); 
   }*/
   
-  //mark a spot on selection (raycaster interception)
-//2021.06.17 Doesn't seem to do anything 
-/*
-  var geometry = new THREE.SphereBufferGeometry( 0.02 );
-  var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-  interceptMark = new THREE.Mesh( geometry, material );
-    interceptMark.visible = false;
-    scene.add( interceptMark );
-*/
-  // setup raycaster for interacting with interested object.
   // ... raycaster and 2D mouse events
   {
     raycaster = new THREE.Raycaster();
-	
+	//raycaster.setFromCamera(mouse,camera);
 	raycaster.linePrecision = 0.03;  //two big value can cause "lines" always in the raycaster intersection.
 	raycaster.params.Points.threshold = 0.03;
-//	mouse = new THREE.Vector2();
-	//mouse = new THREE.Vector3();
-
-/*	if to add feature for moving a pointer:
-    But that can be achieved simply by update a point!
-   $("#c").mousedown(e=>{    
-		e.preventDefault();
-			mouseDownX=e.clientX;
-			mouseDownY=e.clientY;
-	});
-*/
 	
 	
 	function onDocumentTouchStart( e ) {
-		/* 2021.05.21 make no sense ?!
-		e.preventDefault();
-		e.clientX = e.touches[0].clinetX;
-		e.clientY = e.touches[0].clinetY;  */
-		console.log("in onDocumentTouchStart");
 		onMouseDown(e);
 	}
 	//// object picking  
@@ -185,81 +159,142 @@ console.log("width:"+c.clientWidth);
 function removeNewPointEditor(){
 	canvas.removeEventListener('pointerup', edNew);
 }
-function setupNewPointEditor(){
-	canvas.addEventListener('pointerup', edNew);
+//function setupNewPointEditor(){
+function setupClickHandler(mode){
+	//let xx=getEventListeners(canvas);
+	[edNone,edNew, edSticky, edFree].forEach(i=>{
+		canvas.removeEventListener('pointerup',i);	
+	});
+	
+	switch(mode){
+		case "none":
+			canvas.addEventListener('pointerup', edNone);
+			break;
+		case "new":
+			canvas.addEventListener('pointerup', edNew);
+			break;
+		case "sticky modifier":
+			canvas.addEventListener('pointerup', edSticky);
+			break;
+		case "free modifier":
+			canvas.addEventListener('pointerup', edFree);
+			alert("TODO: free ...");
+			break;
+		default:
+			alert("invalid modifier")
+  }
+}
+function edNone(e){     //""mouseup" events not working, because of the OrbitControls!
+	e.preventDefault();   
+	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
+	switch (e.which){
+		case 1: 
+			break;
+		case 2:
+			pointCameraOnClick(e);
+			break;
+		case 3:
+			break;
+		default:
+			alert("a strange mouse event");
+		e.preventDefault();
+	}
 }
 function edNew(e){     //""mouseup" events not working, because of the OrbitControls!
-		e.preventDefault();   
-		//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
-		switch (e.which){
-			case 1: 
-				break;
-			case 2:
-				pointCameraOnClick(e);
-				break;
-			case 3:
-				addPointOnClick(e);
-				break;
-			default:
-				alert("a strange mouse event");
-			e.preventDefault();
-		}
-	}; //, false);
-	//2021.05.21 seems make no sense !  document.addEventListener( 'touchstart', onDocumentTouchStart, false );   //for touch screen devices
-
-	//supporting functions
-	//------------
-	function pointCameraOnClick( e ) {
+	e.preventDefault();   
+	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
+	switch (e.which){
+		case 1: 
+			break;
+		case 2:
+			pointCameraOnClick(e);
+			break;
+		case 3:
+			addPointOnClick(e);
+			break;
+		default:
+			alert("a strange mouse event");
 		e.preventDefault();
-	
-		//normalize mouse coord
-		let mouse = new THREE.Vector2();
-		let rect = renderer.domElement.getBoundingClientRect();
-	
-		mouse.x = ( ( e.clientX - rect.left ) / ( rect.width - rect.left ) ) * 2 - 1;
-		mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-	
-		raycaster.setFromCamera(mouse,camera);
-		
-		let intersects = raycaster.intersectObjects(jlObjs.children, true);
-			
-		console.log("intersected " + intersects.length);
-			
-		if(intersects.length > 0){ 
-			let child = intersects[0];   //point at the facing object		
-			let rawName = child.object.name;
-			console.log("... " + rawName +":("+child.point.x+","+child.point.y+","+child.point.z+")");
-			//camera.lookAt(new THREE.Vector3(child.point.x,child.point.y,child.point.z));
-			//camera.lookAt(new THREE.Vector3(10,10,10));
-			orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
-			orbitCtrl.update();
-		}
 	}
-	
-	function addPointOnClick( e ) {
+}
+function edSticky(e){     //""mouseup" events not working, because of the OrbitControls!
+	e.preventDefault();   
+	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
+	switch (e.which){
+		case 1: 
+			break;
+		case 2:
+			pointCameraOnClick(e);
+			break;
+		case 3:
+			stickyModifier(e);
+			break;
+		default:
+			alert("a strange mouse event");
 		e.preventDefault();
+	}
+}
+function edFree(e){     //""mouseup" events not working, because of the OrbitControls!
+	e.preventDefault();   
+	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
+	switch (e.which){
+		case 1: 
+			break;
+		case 2:
+			pointCameraOnClick(e);
+			break;
+		case 3:
+			freeModifier(e);
+			break;
+		default:
+			alert("a strange mouse event");
+		e.preventDefault();
+	}
+}
+function stickyModifier(e){
+	alert("TODO: sticky ...");
+}
+function freeModifier(e){
+	alert("TODO: free ...");
+}
+
+function prepareRaycaster(e){
+	//the normalize mouse coord
+	let mouse = new THREE.Vector2();
+	// (left, top) = (-1,-1), (right, top) = (1, -1)
+	//           (middle, middle) = (0,0)
+	// (left, bottom) = (-1,1), (right, top) = (1, 1)
+	let rect = renderer.domElement.getBoundingClientRect();
+	mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
+	mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
 	
-		//the normalized mouse coord
-		let mouse = new THREE.Vector2();
-	
-		// (left, top) = (-1,-1), (right, top) = (1, -1)
-		//           (middle, middle) = (0,0)
-		// (left, bottom) = (-1,1), (right, top) = (1, 1)
-		let rect = renderer.domElement.getBoundingClientRect();
-		mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
-		mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-		// ??? [2019.04.23] how about z? no effect !?  
-		//mouse.z = camera.position.z; 
-		//mouse.z = 0.5;
-		//   mouse.unproject( camera );   
-		//   mouse.normalize();
-		//detect the selected 3D pointer 
-		raycaster.setFromCamera(mouse,camera);
-		//let intersects = raycaster.intersectObjects(jlObjs.children, true);
-		let intersects = raycaster.intersectObjects([modelObj], true);
-		//console.log("intersected " + intersects.length);
-		//intersects.forEach((child, ndx) => {  //Respond to the first only. Otherwise, 
-		//									  //the "line" seems will have a lot ...
+	raycaster.setFromCamera(mouse,camera);
+}
+function pointCameraOnClick( e ) {
+	e.preventDefault();
+	prepareRaycaster(e);
+	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
+	let intersects = raycaster.intersectObjects([modelObj], true);  //target only the model
+	//console.log("intersected " + intersects.length);
+	if(intersects.length > 0){ 
+		let child = intersects[0];   //point at the facing object		
+		let rawName = child.object.name;
+		//console.log("... " + rawName +":("+child.point.x+","+child.point.y+","+child.point.z+")");
+		//camera.lookAt(new THREE.Vector3(child.point.x,child.point.y,child.point.z));
+		//camera.lookAt(new THREE.Vector3(10,10,10));
+		orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
+		orbitCtrl.update();
+	}
+}
+function addPointOnClick( e ) {
+	if($('#jlName').text()==''){
+		alert("Please select a JingLuo first.");
+		return;
+	}
+	e.preventDefault();
+	prepareRaycaster(e);
+	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
+	let intersects = raycaster.intersectObjects([modelObj], true);
 /*
 	//2021.05.22: for the purpose of development only ...
 	$("#mouseCoScreen").html("mouse(screen):"+e.clientX+","+e.clientY);	
@@ -277,7 +312,6 @@ function edNew(e){     //""mouseup" events not working, because of the OrbitCont
 	$("#intersectObjs").html(intersectObjs);
 	}
 */
-//TODO 2021.07.10: display the point as soon as clicked ...
 	if(intersects.length > 0){ 
 		let child = intersects[0];
 		//add a temp point to the scene, and make it visible; 
@@ -294,7 +328,6 @@ function edNew(e){     //""mouseup" events not working, because of the OrbitCont
 		$("#editDialog").dialog( "open" );
 	}
 }	
-  
 function addTempPtr(co){
 	let grpName="tempPtrGrp";
 	if(ptsGroups.getObjectByName(grpName) == null){  
@@ -784,7 +817,7 @@ function setupFreeModifier(){
 	scene.add( transformControl );
 
 	//const splineHelperObjects = [];
-	const pointer = new THREE.Vector2();
+	//const pointer = new THREE.Vector2();
 	const onUpPosition = new THREE.Vector2();
 	const onDownPosition = new THREE.Vector2();
 				
@@ -905,6 +938,7 @@ hookupTransformControler, createJLParticles,
 clearGroup, updateParticles,
 setupFreeModifier, removeFreeModifier, 
 setupStickModifier, removeStickModifier,
-setupNewPointEditor, removeNewPointEditor, 
+removeNewPointEditor, 
+setupClickHandler,
 initPointLabels, startAnimation, stopAnimation};
 //export {canvas, camera, scene, renderer, CameraCtrl, labelSize, initGlobalVars};
