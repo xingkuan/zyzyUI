@@ -28,14 +28,16 @@ ptrObjs.name='particles';
 //try use 2D HTML div for labeling (instead of Sprite) 
 function initPointLabels(elemID){
 	//const labelContainer = document.querySelector('#labels');
-	labelContainer = document.querySelector(elemID);
+	//labelContainer = document.querySelector(elemID);
+	labelContainer = $(elemID);
 	labels = [];
 }
 
 
 
 function init3D(id, lblSize) {
-	const c = document.querySelector(id);
+	//const c = document.querySelector(id);
+	const c = $(id);
 	//renderer = new THREE.WebGLRenderer( { antialias: true } );
 	renderer = new THREE.WebGLRenderer({canvas: c});
 	renderer.setPixelRatio( window.devicePixelRatio );
@@ -295,23 +297,6 @@ function addPointOnClick( e ) {
 	prepareRaycaster(e);
 	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
 	let intersects = raycaster.intersectObjects([modelObj], true);
-/*
-	//2021.05.22: for the purpose of development only ...
-	$("#mouseCoScreen").html("mouse(screen):"+e.clientX+","+e.clientY);	
-	$("#renderRect").html("rect:"+rect.left+","+rect.top+","+rect.right+","+rect.bottom);	
-	$("#mouseCoNorm").html("mouse(rect):"+mouse.y+","+mouse.y);	
-	$("#cameraCo").html("camera:"+camera.position.x+','+camera.position.y+','+camera.position.z);	        
-
-	let intersectObjs="objs:<br>";
-	$("#intersectObjs").html(intersectObjs);
-		if(intersects.length > 0){ 
-			let child = intersects[0];		
-			let rawName = child.object.name;
-			console.log("... " + rawName);
-	intersectObjs=intersectObjs+rawName+":("+child.point.x+","+child.point.y+","+child.point.z+")";
-	$("#intersectObjs").html(intersectObjs);
-	}
-*/
 	if(intersects.length > 0){ 
 		let child = intersects[0];
 		//add a temp point to the scene, and make it visible; 
@@ -528,38 +513,6 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 }
 
 
-
-//(lname, lnColor, ptColor){
-/*function createJL(jlName){
-	//console.log('show JL');
-	let points=[];
-	let jlPtrs = jlObjs.getObjectByName( jlName );
-	jlPtrs.children.forEach((e,i)=>{
-		points.push(e.position);
-	});
-	createCurve(points, new THREE.Vector3(0,0,0), jlName);
-	
-	
-	function createCurve(ptsLst, loc, nm){
-		let curve = new THREE.CatmullRomCurve3(ptsLst, false);  
-		//curve.curveType = "centripetal";
-		//curve.closed = false;
-		const ps = curve.getPoints(100);  //get 100 aliquots
-		const geometry = new THREE.BufferGeometry().setFromPoints(ps);  //2021.08.13: why not "curve"?
-		const material = new THREE.LineBasicMaterial({
-			color: 0x00ff00,
-			//color: lnColor,
-			linewidth: 2,
-			transparent: true, opacity: 0.8 ,
-		});
-		let curveObject = new THREE.Line(geometry, material);
-		//curveObject.position.set(pts.position.x,pts.position.y,pts.position.z);
-		curveObject.position.set(loc.x, loc.y, loc.z);
-		//curveObject.name=lname;
-		curveObject.name=nm;
-		jlObjs.add(curveObject);
-	}		
-}*/
 function createJL(jlName, ptrLst){
 	//console.log('show JL');
 	if(ptrLst.length>1){

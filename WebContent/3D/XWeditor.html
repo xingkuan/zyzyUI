@@ -43,13 +43,17 @@
 	<div id="jlCheckBox" style="width:120px"></div>
 	<div id="container" class="container" style="float:left">
 		<div id="xx"  style="postition:relative;background:black; color:white">
-			<!-- button onclick="showJL()">show JingLuo</button  NOT working as showJL() is in a module!? -->
+			Model: <select id = "selectModel">
+				<option value="" disabled selected>Select model</option>
+				<option value = "as_fem2.glb:asian_female_teen">asian female</option>
+				<option value = "NOT:YET">asian male</option>
+			</select><br>
 			<span id="jlName"></span>
 			<!-- button id="hookupTransformCtrl">Hookup Transform Controller</button   -->
-			<input type="radio" class="edMode" id="edNone" name="edMode" value="none" checked><label for="edMode">none</label> 
-			<input type="radio" class="edMode" id="edNew" name="edMode" value="new"><label for="edMode">new</label> 
-			<input type="radio" class="edMode" id="edSMove" name="edMode" value="sticky modifier"><label for="edMode">mod s.</label> 
-			<input type="radio" class="edMode" id="edFMove" name="edMode" value="free modifier"><label for="edMode">mod f.</label> 
+			<input type="radio" id="edNone" name="edMode" class="edMode" value="none" checked><label for="edMode">none</label> 
+			<input type="radio" id="edNew" name="edMode" class="edMode" value="new"><label for="edMode">new</label> 
+			<input type="radio" id="edSMove" name="edMode" class="edMode" value="sticky modifier"><label for="edMode">mod s.</label> 
+			<input type="radio" id="edFMove" name="edMode" class="edMode" value="free modifier"><label for="edMode">mod f.</label> 
 		</div>
 
 		<canvas id="c"></canvas>
@@ -78,18 +82,19 @@ import {init3D, loadGLTF, render, createPoints, createJL,
 	hookupTransformControler, clearGroup,
 	removeNewPointEditor,
 	setupClickHandler,
-	initPointLabels} from './editorGlobals.js';
+	initPointLabels
+} from './editorGlobals.js';
 
-//$("#hookupTransformCtrl").click( e=> {
-//	hookupTransformControler($("#jlName").text());
-//	});
-$('.edMode').click(function(e){
-  var val = $(this).val();
-  //alert(val);
-  setupClickHandler(val);
+// setup model selection
+$("#selectModel").on('change', function(){
+	let msg=$(this).find(":selected").text();
+	let val=$(this).find(":selected").val();
+	let [fname, mname]=val.split(':');
+	//alert(val);
+	initWorkspace(fname, mname);
 });
 
-//size container properly: 
+//Firstly, let's size container properly: 
 let a_ratio=1.5;
 let w=$(window).width();
 let h=$(window).height();
@@ -101,7 +106,7 @@ if(w>h/a_ratio){
 	$("#container").height(h);
 }
 
-//list all the JingLuos, as group of check box
+//Then, list all the JingLuos(group of check box) to the on the left side:
 populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
 	function(e){
 		let val=e["line_name"];
@@ -110,21 +115,35 @@ populateField("http://localhost:8080/zyzySvc/JL/getJLs",
         .append(`<label for="${val}">${val}</label>`)
         .append(`<br>`);
 	});  
-//... and the click event handler for the check boxs:
+//... and setup the corresponding click event handler:
 $('.chkJLname').click(function(e){
   var val = $(this).val();
   $("#jlName").text(val);
-
   //setup JL line name in the popup 
   $("#uiLine").text(val); 
   $("#uiPoint").val("");
-
   //load XueWei and JL into 3D
   loadJL(val);
 	
   render();
 });
 
+//hookup click hander for different editing mode
+$('.edMode').click(function(e){
+  var val = $(this).val();
+  //alert(val);
+  setupClickHandler(val);
+});
+
+//setup the popup dialog
+setupPopup()  ;
+
+//also, diable both , initially
+$(".chkJLname").attr("disabled", true);
+$(".edMode").attr("disabled", true);
+
+
+/////////////////////////////////////////////////////////
 function loadJL(name){
   let ptr, ptrList=[];
   //first empty out the dropdown options:
@@ -133,7 +152,7 @@ function loadJL(name){
   populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+name, 
 	e=>{
 		//the drop down list in the pop-up
-console.log(e["name"]);
+		//console.log(e["name"]);
 		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
 		//if column "coor" contains value, then create the 3D point and add to the scene.
 		if (e['coor'] != null){
@@ -147,24 +166,30 @@ console.log(e["name"]);
 	createJL(name, ptrList);
 }
 
-//initGlobalVars();
-setupPopup()  ;
-initPointLabels('#labels');
-init3D('#c', 30);
-loadGLTF('as_fem2.glb', "asian_female_teen");
-//setupPointEditor();
-//setupTransformControler();
-//...and set the initial to none:
-setupClickHandler('none'); 
-
+function initWorkspace(fname, mname){
+	if(fname=='NOT'){
+		alert("not a real file!");
+		$(".chkJLname").attr("disabled", true);
+		$(".edMode").attr("disabled", true);
+		return;
+	}
+	initPointLabels('#labels');
+	init3D('#c', 30);
+	//loadGLTF('as_fem2.glb', "asian_female_teen");
+	loadGLTF(fname, mname);
+	//...and set the initial to none:
+	setupClickHandler('none'); 
+	//
+	$(".chkJLname").attr("disabled", false);
+	$(".edMode").attr("disabled", false);
+	$("#edNone").prop('checked', 'checked');
+}
 
 import {populateField, savePoint} from './XWJLdata.js';
 
 //initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
 //2021.06.10 Do not animate. re-render only upand mouse events
 //requestAnimationFrame(render);  // this way, "time" can be passed to render()
-
-
 //2021.06.17 don't do it yet. render(e=>{d=new Date();return d.getTime();});
 
 //********************************************************
@@ -206,66 +231,10 @@ $("#uiPoint").blur(function(){
 		});
 });
 
-//
-//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   ////init Line List of the popup;
-//		function(e){
-//			//populate the dropdown list
-//			$("#dataLineList").append($("<option></option>").attr("value", e["line_name"]));
-//			//add 3D points to the 3D model
-//		});  
-//
 };  //end setupPopup()
-
-////////////////////
-
-
-
-
-
-
-
-
-
-
-
-//var flowTexture;   //needed global var so it can be accessed from within render()  
-/*2021.06.16  This is certainly not doing anything !!!
-function resizeRendererToDisplaySize(renderer) {
-    const canvas = renderer.domElement;
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const needResize = canvas.width !== width || canvas.height !== height;
-    if (needResize) {
-      renderer.setSize(width, height, false);
-    }
-    return needResize;
-}
-
-
-
-
-let del = 0;  // between each two points, interpolate 2 points to simulate flow. 
-			  // TODO: Should use GPU as well.
-function updateParticles(){ 
-	if (del==2){
-		del=0;
-	}else{
-		del=(del+1);
-	}
-	ptrObjs.children.forEach((child, ndx) => {
-		child.material.uniforms.del.value=del * 0.3;
-		child.needsUpdate = true;
-	})
-}    
-*/
 
 /////////////////////////////////////    
 function composeData() {
-	/*    return JSON.stringify({
-	 "cat": $('input[name="cat"]:checked').val(),
-	 "data": $('#txtNote').val()
-	 })
-	 */
 	//alert($('#selRelation option:selected').val());
 	var strRslt, rsltObj;
 	rsltObj = {
