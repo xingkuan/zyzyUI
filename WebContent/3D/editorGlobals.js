@@ -28,16 +28,16 @@ ptrObjs.name='particles';
 //try use 2D HTML div for labeling (instead of Sprite) 
 function initPointLabels(elemID){
 	//const labelContainer = document.querySelector('#labels');
-	//labelContainer = document.querySelector(elemID);
-	labelContainer = $(elemID);
+	labelContainer = document.querySelector(elemID);
+	//labelContainer = $(elemID);
 	labels = [];
 }
 
 
 
 function init3D(id, lblSize) {
-	//const c = document.querySelector(id);
-	const c = $(id);
+	const c = document.querySelector(id);
+	//const c = $(id);
 	//renderer = new THREE.WebGLRenderer( { antialias: true } );
 	renderer = new THREE.WebGLRenderer({canvas: c});
 	renderer.setPixelRatio( window.devicePixelRatio );

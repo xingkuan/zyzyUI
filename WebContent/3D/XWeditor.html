@@ -30,11 +30,7 @@
   <br>
   Seq: <input type="number" id="uiSeq" name="uiSeq" />
   <br>
-  expond:<textarea id="xpond" name="nameExpond" cols=40 rows=3 ></textarea>
-  <br>
-  apps:<textarea id="apps" name="apps" cols=40 rows=3 ></textarea>
-  <br>
-  desc:<textarea id="desc" name="desc" cols=40 rows=3 ></textarea>
+  content:<textarea id="content" name="content" cols=40 rows=5 ></textarea>
 </form>
 </div>
 
@@ -94,6 +90,8 @@ $("#selectModel").on('change', function(){
 	initWorkspace(fname, mname);
 });
 
+var modelName;
+
 //Firstly, let's size container properly: 
 let a_ratio=1.5;
 let w=$(window).width();
@@ -107,9 +105,11 @@ if(w>h/a_ratio){
 }
 
 //Then, list all the JingLuos(group of check box) to the on the left side:
-populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
+//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
+populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
 	function(e){
-		let val=e["line_name"];
+		//let val=e["line_name"];
+		let val=e["name"];
     	$('#jlCheckBox')
         .append(`<input type="radio" id="${val}" class="chkJLname" name="name" value="${val}">`)
         .append(`<label for="${val}">${val}</label>`)
@@ -149,7 +149,7 @@ function loadJL(name){
   //first empty out the dropdown options:
   $("#dataPtrList").empty();
 
-  populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+name, 
+  populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+modelName+"/"+name, 
 	e=>{
 		//the drop down list in the pop-up
 		//console.log(e["name"]);
@@ -173,6 +173,9 @@ function initWorkspace(fname, mname){
 		$(".edMode").attr("disabled", true);
 		return;
 	}
+	
+	modelName=mname;
+
 	initPointLabels('#labels');
 	init3D('#c', 30);
 	//loadGLTF('as_fem2.glb', "asian_female_teen");
@@ -223,14 +226,15 @@ $( "#editDialog" ).dialog({
 //popup form field event hanlers
 $("#uiPoint").blur(function(){
 	//alert($(this).val());
-	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+$("#jlName").text() +"/"+$(this).val(), 
+	//TODO20210728: XW data will be from INFOSTG; but "seq" and "coor" will be from JL.
+	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+modelName+"/"+$("#jlName").text() +"/"+$(this).val(), 
 		e=>{$("#uiSeq").val(e["seq"]);
-			$("#xpond").text(e["name_explained"]);
-			$("#apps").text(e["applications"]);
-			$("#desc").text(e["description"]);
+		});
+	populateField("http://localhost:8080/zyzySvc/STG/getXWByName/"+$("#jlName").text() +"/"+$(this).val(), 
+		e=>{//$("#xpond").text(e["name_explained"]);
+			$("#content").text(e["content"]);
 		});
 });
-
 };  //end setupPopup()
 
 /////////////////////////////////////    
@@ -238,6 +242,7 @@ function composeData() {
 	//alert($('#selRelation option:selected').val());
 	var strRslt, rsltObj;
 	rsltObj = {
+		model_name: modelName,
 		line_name:	$("#jlName").text(),  //$('#uiLine').text(),
 		name:	$('#uiPoint').val(),
 		seq:	$('#uiSeq').val(),
