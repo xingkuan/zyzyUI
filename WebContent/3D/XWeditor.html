@@ -30,6 +30,8 @@
   <br>
   Seq: <input type="number" id="uiSeq" name="uiSeq" />
   <br>
+  meta:<textarea id="meta" name="meta" cols=40 rows=2 ></textarea>
+  <br>
   content:<textarea id="content" name="content" cols=40 rows=5 ></textarea>
 </form>
 </div>
@@ -90,7 +92,7 @@ $("#selectModel").on('change', function(){
 	initWorkspace(fname, mname);
 });
 
-var modelName;
+var modelName, jlNum;
 
 //Firstly, let's size container properly: 
 let a_ratio=1.5;
@@ -109,21 +111,23 @@ if(w>h/a_ratio){
 populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
 	function(e){
 		//let val=e["line_name"];
-		let val=e["name"];
+		let name=e["name"];
+		let seq=e["seq"];
     	$('#jlCheckBox')
-        .append(`<input type="radio" id="${val}" class="chkJLname" name="name" value="${val}">`)
-        .append(`<label for="${val}">${val}</label>`)
+        .append(`<input type="radio" id="${name}" class="chkJLname" name="chkJLname" value="${seq}">`)
+        .append(`<label for="${name}">${name}</label>`)
         .append(`<br>`);
 	});  
 //... and setup the corresponding click event handler:
 $('.chkJLname').click(function(e){
-  var val = $(this).val();
-  $("#jlName").text(val);
+  jlNum = $(this).val();
+  let name=$(this).attr("id");
+  $("#jlName").text(name);
   //setup JL line name in the popup 
-  $("#uiLine").text(val); 
+  $("#uiLine").text(name); 
   $("#uiPoint").val("");
   //load XueWei and JL into 3D
-  loadJL(val);
+  loadJL(name);
 	
   render();
 });
@@ -188,7 +192,7 @@ function initWorkspace(fname, mname){
 	$("#edNone").prop('checked', 'checked');
 }
 
-import {populateField, savePoint} from './XWJLdata.js';
+import {populateField, savePointUI, savePointContent} from './XWJLdata.js';
 
 //initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
 //2021.06.10 Do not animate. re-render only upand mouse events
@@ -197,6 +201,13 @@ import {populateField, savePoint} from './XWJLdata.js';
 
 //********************************************************
 ////// set up the pop up for entering infomations.
+var updatedSTGcontent=false;  //an indicate to tell if "meta" and "content" need to be saved.
+$("#content").change(function(){
+	updatedSTGcontent=true;
+});
+$("#meta").change(function(){
+	updatedSTGcontent=true;
+});
 function setupPopup(){
 $( "#editDialog" ).dialog({
 	autoOpen: false,
@@ -208,7 +219,11 @@ $( "#editDialog" ).dialog({
       	},
      	"Submit ": function(){
 	  		//console.log($("#uiLine").val()+","+$("#uiPoint").val());
-	     	savePoint(composeData);
+	     	savePointUI(composeData);   //Save (x,y,z) to jl.points table
+			if(updatedSTGcontent){
+				savePointContent(composeData);    //save Xuewei info to infostg.
+				updatedSTGcontent=false;
+			}
 	   		//re-enable 3D object event handler.
 	     	$("#container").attr('disabled','auto');		
 			$( this ).dialog( "close" );
@@ -230,8 +245,8 @@ $("#uiPoint").blur(function(){
 	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+modelName+"/"+$("#jlName").text() +"/"+$(this).val(), 
 		e=>{$("#uiSeq").val(e["seq"]);
 		});
-	populateField("http://localhost:8080/zyzySvc/STG/getXWByName/"+$("#jlName").text() +"/"+$(this).val(), 
-		e=>{//$("#xpond").text(e["name_explained"]);
+	populateField("http://localhost:8080/zyzySvc/STG/getStgContentByName/3/" +$(this).val(), 
+		e=>{$("#meta").text(e["meta"]);
 			$("#content").text(e["content"]);
 		});
 });
@@ -240,12 +255,14 @@ $("#uiPoint").blur(function(){
 /////////////////////////////////////    
 function composeData() {
 	//alert($('#selRelation option:selected').val());
+	let stgInfoID= jlNum*1000+$('#uiSeq').val();  //construct it as lineID*1000+seq
 	var strRslt, rsltObj;
 	rsltObj = {
 		model_name: modelName,
 		line_name:	$("#jlName").text(),  //$('#uiLine').text(),
 		name:	$('#uiPoint').val(),
-		seq:	$('#uiSeq').val(),
+		src: {srcID: "3", name:	$('#uiPoint').val(), srcContent: $('#content').val(), seq: stgInfoID, meta: $('#meta').val()}, //used in call REST API to save to INFOSTG
+		uiSeq: $('#uiSeq').val(),
 		x:	$('#ptrX').text(),
 		y:	$('#ptrY').text(),
 		z:	$('#ptrZ').text()

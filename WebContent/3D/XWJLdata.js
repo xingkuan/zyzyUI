@@ -22,7 +22,7 @@ function populateField(url, fn){
     });
 } 
 
-function savePoint(fn) {
+function savePointUI(fn) {
 	let	url="http://localhost:8080/zyzySvc/JL/upsertPoint";
 	$.ajax({
 		type : 'POST',
@@ -42,6 +42,22 @@ function savePoint(fn) {
             //loadPage(srcId, srcSeq);
             //location.reload();
             //window.location = thisUrl;
+		},
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		}
+	})
+}
+function savePointContent(fn) {
+	let	url="http://localhost:8080/zyzySvc/STG/srcSaveNewVersion";
+	$.ajax({
+		type : 'POST',
+		async: false,
+		url : url,
+		contentType : 'application/text',
+		dataType : "text",
+		data : fn(),
+		success : function(data, textStatus, jqXHR) {
 		},
 		error : function(jqXHR, textStatus, errorThrown) {
 			alert('error: ' + textStatus + errorThrown);
@@ -73,6 +89,6 @@ function buildJLpath(jl){
 
 
 
-export {populateField, savePoint};
+export {populateField, savePointUI, savePointContent};
 
 
