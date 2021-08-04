@@ -48,8 +48,9 @@
 <script type="module">
 //import * as THREE from './threejs/build/three.module.js'
 import {populateField} from './XWJLdata.js';
-import {init3D, loadGLTF, render, createPoints, createJL, createJLParticles, 
-	hookupTransformControler, clearGroup, updateParticles,
+import {init3D, loadGLTF, render, 
+	createPointsOfJL, createLinesOfJL, createParticlesOfJL, 
+	clearGroup, updateParticles,
 	setupFreeModifier, removeFreeModifier, 
 	setupStickModifier, removeStickModifier, 
 	initPointLabels, startAnimation, stopAnimation
@@ -99,9 +100,9 @@ function animation(tgt){
 }
 
 //list all the JingLuos, as group of check box
-populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
+populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
 	function(e){
-		let val=e["line_name"];
+		let val=e["name"];
     	$('#jlCheckBox')
         .append(`<input type="radio" id="${val}" class="chkJLname" name="name" value="${val}">`)
         .append(`<label for="${val}">${val}</label>`)
@@ -129,23 +130,32 @@ $('.chkJLname').click(function(e){
 $(".chkJLname").attr("disabled", true);
 
 
-function loadJL(name){
-  let ptr, ptrList=[];
-    populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+modelName+"/"+name, 
+function loadJL(jlName){
+  let ptr;
+  let ptrList=[], temp=[];  // eg. [ [pt1, pt2 ...], [pt10, pt20, ...]]
+
+  let preSubLine=0;
+  populateField("http://localhost:8080/zyzySvc/XW/getPointsOfJL/"+modelName+"/"+jlName, 
 	e=>{
-		//the drop down list in the pop-up
-		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
+		if( e["sline"] != preSubLine ) { // first subLine, 0, is complete; now is 1 or 1+:
+			ptrList.push(temp);
+			temp=[];  //empty the temp list
+			preSubLine=e["sLine"];
+		} 
+//		//the drop down list in the pop-up
+//		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
 		//if column "coor" contains value, then create the 3D point and add to the scene.
 		if (e['coor'] != null){
-			ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
+			temp.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
 		}
 	});
+	ptrList.push(temp);
+
 	//remove all XueWei and JL objects, and working on the currently selected:
 	clearGroup(name);
 	if(ptrList.length>0){
-		createPoints(name, ptrList);
-		//createJL(name, ptrList);
-		createJLParticles(name, ptrList, {r:0,g:250,b:0} , 3.0);
+		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
+		createParticlesOfJL(jlName, ptrList, {r:0,g:250,b:0} , 3.0);
 	}
 }
 ;

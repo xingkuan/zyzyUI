@@ -103,6 +103,7 @@ console.log("width:"+c.clientWidth);
 	orbitCtrl.update();
   }
 
+/*2021.08.02 Remove it in order to be able to add 涌泉	
   // the ground. will very likely removed![TODO 20210710]
   {
 	  const planeSize = 40;
@@ -124,6 +125,7 @@ console.log("width:"+c.clientWidth);
 	  mesh.name="ground";
 	  scene.add(mesh);
   }
+*/
   //add the jingluo object to the scene
   scene.add(jlObjs);
 
@@ -323,44 +325,13 @@ function addTempPtr(co){
 	
 	let tmpPtrGrp=ptsGroups.getObjectByName(grpName);
 	tmpPtrGrp.clear();
-	let pt=createPointObject("tempPtr", co, {color: 0xff0000});
+	let pt=create3DPoint("tempPtr", co, {color: 0xff0000});
 	tmpPtrGrp.add(pt);
 
 	render();
 }
 
-function createPoints(lName, ptrLst){
-	////If the point group for this JingLuo not created yet, create it. 
-	//if(ptsGroups[lName] == null){
-	//	console.log(ptsGroups);
-		ptsGroups[lName] = new THREE.Group();
-		ptsGroups[lName].name=lName;
-		ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
-	//	console.log(ptsGroups);
-	//}
-
-	//console.log("point co:", ptPos);
-	ptrLst.forEach(p=>{
-		let [xwName, seq, co, isXW]=p;
-		//if(isXW){
-		/*	let ptSph;
-			// the point spot
-			let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
-			let ptMat = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
-			ptSph = new THREE.Mesh( ptGeo, ptMat );
-			ptSph.position.set(co['x'], co['y'], co['z']);
-			// ...
-			ptSph.name = xwName + seq; 
-			//scene.add( ptSph );   // to be displayed as 3D obj
-			ptsGroups[lName].add(ptSph);
-			*/
-		let pt=createPointObject(xwName +" "+seq, co, {color: 0x0000ff});
-		ptsGroups[lName].add(pt);
-		//}
-	});
-}
-
-function createPointObject(name, co, ptColor){
+function create3DPoint(name, co, ptColor){
 	let ptSph;
 	// the point spot
 	let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
@@ -512,19 +483,48 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 	return lines;
 }
 
+function createPointsOfJL(lName, ptrLst, color){
+	////If the point group for this JingLuo not created yet, create it. 
+	//if(ptsGroups[lName] == null){
+	//	console.log(ptsGroups);
+		ptsGroups[lName] = new THREE.Group();
+		ptsGroups[lName].name=lName;
+		ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
+	//	console.log(ptsGroups);
+	//}
 
-function createJL(jlName, ptrLst){
+	//console.log("point co:", ptPos);
+	ptrLst.forEach(p=>{
+		createPtsOfSubLine(p);
+		});
+	function createPtsOfSubLine(plst){
+	plst.forEach(p=>{
+		let [xwName, seq, co, isXW]=p;
+		//let pt=create3DPoint(xwName +" "+seq, co, {color: 0x0000ff});
+		let pt=create3DPoint(xwName +" "+seq, co, {color: new THREE.Vector4(color.r, color.g, color.b, 0.5)});
+		ptsGroups[lName].add(pt);
+			//}
+	});
+	}
+}
+
+function createLinesOfJL(jlName, ptrGrp, color){
+	//ptrLst:  [ [ptr1, ptr2, ..], [ptr4, ptr5, ...], ... ]
 	//console.log('show JL');
-	if(ptrLst.length>1){
+	if(ptrGrp.length>0){
+		ptrGrp.forEach((p,i)=>{
+			createSubLine(p);
+		});
+	}
+	function createSubLine(subLinePtrs){
 		let points=[];
-		ptrLst.forEach((p,i)=>{
+		subLinePtrs.forEach((p,i)=>{
 			let [xwName, seq, co, isXW]=p;
 			//if(isXW)
 				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
 		});
 		createCurve(points, new THREE.Vector3(0,0,0), jlName);
 	}
-	
 	function createCurve(ptsLst, loc, nm){
 		let curve = new THREE.CatmullRomCurve3(ptsLst, false);  
 		//curve.curveType = "centripetal";
@@ -532,8 +532,8 @@ function createJL(jlName, ptrLst){
 		const ps = curve.getPoints(100);  //get 100 aliquots
 		const geometry = new THREE.BufferGeometry().setFromPoints(ps);  //2021.08.13: why not "curve"?
 		const material = new THREE.LineBasicMaterial({
-			color: 0x00ff00,
-			//color: lnColor,
+			//color: 0x00ff00,
+			color: new THREE.Vector4(color.r, color.g, color.b, 0.5),
 			linewidth: 2,
 			transparent: true, opacity: 0.8 ,
 		});
@@ -548,41 +548,49 @@ function createJL(jlName, ptrLst){
 	}		
 }
 
-function createJLParticles(jlName, ptrLst, color, size){
-	let points=[];
-	if(ptrLst.length>1){
-		ptrLst.forEach((p,i)=>{
+function createParticlesOfJL(jlName, ptrGrps, color, size){
+	let pathLen="length: "
+	if(ptrGrps.length>0){
+		ptrGrps.forEach((p,i)=>{
+			createSubParticles(p);
+		});
+	}
+	$("#curvLen").html(pathLen);
+
+	function createSubParticles(pLst) {
+		let points=[];
+		pLst.forEach((p,i)=>{
 			let [xwName, seq, co, isXW]=p;
 			//if(isXW)
 				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
 		});
-	}
 
-	let curve = new THREE.CatmullRomCurve3(points, false);  
+		let curve = new THREE.CatmullRomCurve3(points, false);  
 		//curve.curveType = "centripetal";
 		//curve.closed = false;
 		
-	//TODO20210716: may use length to decide how many points
-	let len=curve.getLength();
-	$("#curvLen").html("length:"+len);
-	let numPts=25;
+		//TODO20210716: may use length to decide how many points
+		let len=curve.getLength();
+		pathLen = pathLen + len.toString() + ", "
+		//$("#curvLen").html("length:"+len);
+		let numPts=25;
 		
-	const ps = curve.getSpacedPoints(numPts);   //20210715: TODO: number of points may better be a parameter.
+		const ps = curve.getSpacedPoints(numPts);   //20210715: TODO: number of points may better be a parameter.
 
-	let pArray=[], cArray=[], sArray=[], idArray=[], i=0.0;
-	ps.forEach(p=> {
+		let pArray=[], cArray=[], sArray=[], idArray=[], i=0.0;
+		ps.forEach(p=> {
             pArray.push(p.x,p.y,p.z);
 			//cArray.push( color.r, color.g, color.b, 0.5 );  //20210719: Let's make color uniform'
 			sArray.push( size );    //Different point can have different size
 			idArray.push (i);       //create sequence id; to be used for animate flowing by verying blrightness of partices
 			i += 1.0;
         } );
-	drawParticles(jlName,   
+		drawParticles(jlName,   
             		pArray,  
             		cArray, 
             		sArray,
 					idArray);	
-
+	}
 	function drawParticles(lName, pArray, cArray, sArray, idArray ){
 	//let  uniforms = {    
 	//		texture: { value: new THREE.TextureLoader().load( "particle.png" ) },
@@ -817,57 +825,8 @@ function setupFreeModifier(){
 			transformControl.detach();
 		}*/
 	}
-//TODO 20210710: not needed?	
-	function addPoint() {
-		splinePointsLength ++;
-	
-		positions.push( addSplineObject().position );
-		updateSplineOutline();
-	}
-	
-//TODO 20210710: not needed?	
-	function removePoint() {
-		if ( splinePointsLength <= 4 ) {
-			return;
-		}
-	
-		const point = splineHelperObjects.pop();
-		splinePointsLength --;
-		positions.pop();
-	
-		if ( transformControl.object === point ) 
-			transformControl.detach();
-			
-		scene.remove( point );
-	
-		updateSplineOutline();
-	}
-	
-//TODO 20210710: not needed?	
-	function updateSplineOutline() {
-		for ( const k in splines ) {
-			const spline = splines[ k ];
-	
-			const splineMesh = spline.mesh;
-			const position = splineMesh.geometry.attributes.position;
-	
-			for ( let i = 0; i < ARC_SEGMENTS; i ++ ) {
-				const t = i / ( ARC_SEGMENTS - 1 );
-				spline.getPoint( t, point );
-				position.setXYZ( i, point.x, point.y, point.z );
-			}
-	
-			position.needsUpdate = true;
-		}
-	}
 }
-function hookupTransformControler(jl){
-	activeJL = jl;
-}
-
-
-
-  
+	
 /*2021.06.16  This is certainly not doing anything !!!
 function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
@@ -879,15 +838,10 @@ function resizeRendererToDisplaySize(renderer) {
     }
     return needResize;
 }
-
 */
 
-
-
-
-
-export {labelSize, renderer, init3D, loadGLTF, render,createPoints, createJL, 
-hookupTransformControler, createJLParticles,
+export {labelSize, renderer, init3D, loadGLTF, render,
+createPointsOfJL, createLinesOfJL,createParticlesOfJL,
 clearGroup, updateParticles,
 setupFreeModifier, removeFreeModifier, 
 setupStickModifier, removeStickModifier,

@@ -9,7 +9,7 @@ function populateField(url, fn){
 		async: false,
         data: "",
         success: function(data) {
-        	//console.log(data);
+        	console.log(data);
         	if(data != null){
     		//json=JSON.parse(data);
     		//json.forEach(function(val){
@@ -17,13 +17,13 @@ function populateField(url, fn){
         }
         },
 		error : function(jqXHR, textStatus, errorThrown) {
-			alert('error: ' + textStatus + errorThrown);
+			alert('error: ' + fn + " " + textStatus + errorThrown);
 		}
     });
 } 
 
 function savePointUI(fn) {
-	let	url="http://localhost:8080/zyzySvc/JL/upsertPoint";
+	let	url="http://localhost:8080/zyzySvc/XW/upsertPoint";
 	$.ajax({
 		type : 'POST',
 		async: false,
@@ -68,7 +68,7 @@ function savePointContent(fn) {
 
 
 function buildJLpath(jl){
-	let url='http://localhost:8080/zyzySvc/JL/getPointsByJL/'+jl;
+	let url='http://localhost:8080/zyzySvc/XW/getPointsByJL/'+jl;
     $.ajax({
         type: "GET",
         url: url,

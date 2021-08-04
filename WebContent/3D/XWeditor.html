@@ -28,11 +28,12 @@
   Point: <input list="dataPtrList" id="uiPoint" name="uiPoint" />
 	<datalist id="dataPtrList"></datalist>
   <br>
-  Seq: <input type="number" id="uiSeq" name="uiSeq" />
+  Seq: <input type="number" id="uiSeq" name="uiSeq" style="width: 3em"/>
+  SubLine Num: <textarea id="subNum" name="subNum" cols=4 rows=1></textarea>
   <br>
-  meta:<textarea id="meta" name="meta" cols=40 rows=2 ></textarea>
+  meta:<textarea id="txtMeta" name="meta" cols=40 rows=2 ></textarea>
   <br>
-  content:<textarea id="content" name="content" cols=40 rows=5 ></textarea>
+  content:<textarea id="txtContent" name="content" cols=40 rows=5 ></textarea>
 </form>
 </div>
 
@@ -76,8 +77,8 @@
 <script type="module">
 //import * as THREE from './threejs/build/three.module.js'
 
-import {init3D, loadGLTF, render, createPoints, createJL, 
-	hookupTransformControler, clearGroup,
+import {init3D, loadGLTF, render, createPointsOfJL, createLinesOfJL, 
+	clearGroup,
 	removeNewPointEditor,
 	setupClickHandler,
 	initPointLabels
@@ -107,10 +108,8 @@ if(w>h/a_ratio){
 }
 
 //Then, list all the JingLuos(group of check box) to the on the left side:
-//populateField("http://localhost:8080/zyzySvc/JL/getJLs",   
 populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
 	function(e){
-		//let val=e["line_name"];
 		let name=e["name"];
 		let seq=e["seq"];
     	$('#jlCheckBox')
@@ -148,26 +147,39 @@ $(".edMode").attr("disabled", true);
 
 
 /////////////////////////////////////////////////////////
-function loadJL(name){
-  let ptr, ptrList=[];
+function loadJL(jlName){
+  let ptr;
+  let ptrList=[], temp=[];  // eg. [ [pt1, pt2 ...], [pt10, pt20, ...]]
   //first empty out the dropdown options:
   $("#dataPtrList").empty();
 
-  populateField("http://localhost:8080/zyzySvc/JL/getPointsByJL/"+modelName+"/"+name, 
+  let preSubLine=0;
+  let isFirstPOfSubLine=false;
+  populateField("http://localhost:8080/zyzySvc/XW/getPointsOfJL/"+modelName+"/"+jlName, 
 	e=>{
-		//the drop down list in the pop-up
-		//console.log(e["name"]);
-		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
+		if( e["sline"] != preSubLine ) { // first subLine, 0, is complete; now is 1 or 1+:
+			ptrList.push(temp);
+			temp=[];  //empty the temp list
+			isFirstPOfSubLine=true;
+			preSubLine=e["sLine"];
+		} 
+		if(isFirstPOfSubLine){   //for any subline, the first pt is shared with other sub-line; so do not add
+			isFirstPOfSubLine=false;
+		}else{ 
+			$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
+		}
+		
 		//if column "coor" contains value, then create the 3D point and add to the scene.
 		if (e['coor'] != null){
-			ptrList.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
+			temp.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
 		}
 	});
+	ptrList.push(temp);
 
 	//remove all XueWei and JL objects, and working on the currently selected:
-	clearGroup(name);
-	createPoints(name, ptrList);
-	createJL(name, ptrList);
+	clearGroup(jlName);
+	createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
+	createLinesOfJL(jlName, ptrList, {r:0,g:250,b:0});
 }
 
 function initWorkspace(fname, mname){
@@ -202,10 +214,10 @@ import {populateField, savePointUI, savePointContent} from './XWJLdata.js';
 //********************************************************
 ////// set up the pop up for entering infomations.
 var updatedSTGcontent=false;  //an indicate to tell if "meta" and "content" need to be saved.
-$("#content").change(function(){
+$("#txtContent").change(function(){
 	updatedSTGcontent=true;
 });
-$("#meta").change(function(){
+$("#txtMeta").change(function(){
 	updatedSTGcontent=true;
 });
 function setupPopup(){
@@ -220,7 +232,8 @@ $( "#editDialog" ).dialog({
      	"Submit ": function(){
 	  		//console.log($("#uiLine").val()+","+$("#uiPoint").val());
 	     	savePointUI(composeData);   //Save (x,y,z) to jl.points table
-			if(updatedSTGcontent){
+			if( updatedSTGcontent &&
+				(!$('#uiPoint').val().startsWith('x')) ){
 				savePointContent(composeData);    //save Xuewei info to infostg.
 				updatedSTGcontent=false;
 			}
@@ -241,13 +254,15 @@ $( "#editDialog" ).dialog({
 //popup form field event hanlers
 $("#uiPoint").blur(function(){
 	//alert($(this).val());
-	//TODO20210728: XW data will be from INFOSTG; but "seq" and "coor" will be from JL.
-	populateField("http://localhost:8080/zyzySvc/JL/getPointByName/"+modelName+"/"+$("#jlName").text() +"/"+$(this).val(), 
-		e=>{$("#uiSeq").val(e["seq"]);
+	//XW data will be from INFOSTG; but "seq" and "coor" will be from JL.
+	populateField("http://localhost:8080/zyzySvc/XW/getPointByName/"+modelName+"/"+$("#jlName").text() +"/"+$(this).val(), 
+		e=>{
+			$("#uiSeq").val(e["seq"]);
+			$("#subNum").val(e["sub_lines"]);
 		});
 	populateField("http://localhost:8080/zyzySvc/STG/getStgContentByName/3/" +$(this).val(), 
-		e=>{$("#meta").text(e["meta"]);
-			$("#content").text(e["content"]);
+		e=>{$("#txtMeta").val(e["meta"]);
+			$("#txtContent").val(e["content"]);
 		});
 });
 };  //end setupPopup()
@@ -255,18 +270,22 @@ $("#uiPoint").blur(function(){
 /////////////////////////////////////    
 function composeData() {
 	//alert($('#selRelation option:selected').val());
-	let stgInfoID= jlNum*1000+$('#uiSeq').val();  //construct it as lineID*1000+seq
+	let stgInfoID= jlNum*1000+parseInt($('#uiSeq').val());  //construct it as lineID*1000+seq  
+	stgInfoID=stgInfoID.toString();       // for whatever reason, the API was coded to take in string ...
 	var strRslt, rsltObj;
 	rsltObj = {
 		model_name: modelName,
 		line_name:	$("#jlName").text(),  //$('#uiLine').text(),
 		name:	$('#uiPoint').val(),
-		src: {srcID: "3", name:	$('#uiPoint').val(), srcContent: $('#content').val(), seq: stgInfoID, meta: $('#meta').val()}, //used in call REST API to save to INFOSTG
 		uiSeq: $('#uiSeq').val(),
+		subNum: $('#subNum').val(),
 		x:	$('#ptrX').text(),
 		y:	$('#ptrY').text(),
-		z:	$('#ptrZ').text()
-		
+		z:	$('#ptrZ').text(),
+		src: {srcID: "3", name:	$('#uiPoint').val(),   //used in call REST API to save to INFOSTG 
+			srcContent: $('#txtContent').val(), 
+			seq: stgInfoID, meta: $('#txtMeta').val()
+		}, 
 	};
 	
 	//alert(typeof rsltObj );
