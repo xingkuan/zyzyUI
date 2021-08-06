@@ -161,8 +161,9 @@ function loadJL(jlName){
 			ptrList.push(temp);
 			temp=[];  //empty the temp list
 			isFirstPOfSubLine=true;
-			preSubLine=e["sLine"];
+			preSubLine=e["sline"];
 		} 
+
 		if(isFirstPOfSubLine){   //for any subline, the first pt is shared with other sub-line; so do not add
 			isFirstPOfSubLine=false;
 		}else{ 
@@ -174,12 +175,15 @@ function loadJL(jlName){
 			temp.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
 		}
 	});
-	ptrList.push(temp);
+	if(temp.length>0)
+		ptrList.push(temp);
 
 	//remove all XueWei and JL objects, and working on the currently selected:
 	clearGroup(jlName);
-	createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
-	createLinesOfJL(jlName, ptrList, {r:0,g:250,b:0});
+	if(ptrList.length>0){
+		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
+		createLinesOfJL(jlName, ptrList, {r:0,g:250,b:0});
+	}
 }
 
 function initWorkspace(fname, mname){
@@ -261,8 +265,13 @@ $("#uiPoint").blur(function(){
 			$("#subNum").val(e["sub_lines"]);
 		});
 	populateField("http://localhost:8080/zyzySvc/STG/getStgContentByName/3/" +$(this).val(), 
-		e=>{$("#txtMeta").val(e["meta"]);
-			$("#txtContent").val(e["content"]);
+		e=>{
+			let content = e["content"];
+			if( e["content"] ) 
+				content=e["content"];
+			
+			$("#txtMeta").val(e["meta"]);
+			$("#txtContent").val(content);
 		});
 });
 };  //end setupPopup()

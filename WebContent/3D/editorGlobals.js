@@ -511,11 +511,9 @@ function createPointsOfJL(lName, ptrLst, color){
 function createLinesOfJL(jlName, ptrGrp, color){
 	//ptrLst:  [ [ptr1, ptr2, ..], [ptr4, ptr5, ...], ... ]
 	//console.log('show JL');
-	if(ptrGrp.length>0){
-		ptrGrp.forEach((p,i)=>{
-			createSubLine(p);
-		});
-	}
+	ptrGrp.forEach((p,i)=>{
+		createSubLine(p);
+	});
 	function createSubLine(subLinePtrs){
 		let points=[];
 		subLinePtrs.forEach((p,i)=>{
