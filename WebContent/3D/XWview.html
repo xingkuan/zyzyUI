@@ -49,12 +49,12 @@
 //import * as THREE from './threejs/build/three.module.js'
 import {populateField} from './XWJLdata.js';
 import {init3D, loadGLTF, render, 
-	createPointsOfJL, createLinesOfJL, createParticlesOfJL, 
-	clearGroup, updateParticles,
+	createPointsOfJL, createLinesOfJL, createParticleSysOfJL, 
+	clearGroup, updateAllParticleSys,
 	setupFreeModifier, removeFreeModifier, 
 	setupStickModifier, removeStickModifier, 
 	initPointLabels, startAnimation, stopAnimation
-} from './editorGlobals.js';
+} from './3Dcommons.js';
 
 // setup model selection
 $("#selectModel").on('change', function(){
@@ -123,7 +123,7 @@ $('.chkJLname').click(function(e){
 
   //load XueWei and JL into 3D
   loadJL(val);
-  updateParticles();
+  updateAllParticleSys();
   render();
 });
 //diable them, initially
@@ -140,22 +140,22 @@ function loadJL(jlName){
 		if( e["sline"] != preSubLine ) { // first subLine, 0, is complete; now is 1 or 1+:
 			ptrList.push(temp);
 			temp=[];  //empty the temp list
-			preSubLine=e["sLine"];
+			preSubLine=e["sline"];
 		} 
-//		//the drop down list in the pop-up
-//		$("#dataPtrList").append($("<option></option>").attr("value", e["name"]));
+
 		//if column "coor" contains value, then create the 3D point and add to the scene.
 		if (e['coor'] != null){
 			temp.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
 		}
 	});
-	ptrList.push(temp);
+	if(temp.length>0)
+		ptrList.push(temp);
 
 	//remove all XueWei and JL objects, and working on the currently selected:
 	clearGroup(name);
 	if(ptrList.length>0){
 		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
-		createParticlesOfJL(jlName, ptrList, {r:0,g:250,b:0} , 3.0);
+		createParticleSysOfJL(jlName, ptrList, {r:0,g:250,b:0} , 3.0);
 	}
 }
 ;

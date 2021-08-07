@@ -3,27 +3,41 @@ import { OrbitControls } from './threejs/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from './threejs/examples/jsm/loaders/GLTFLoader.js';
 import { TransformControls } from "./threejs/examples/jsm/controls/TransformControls.js";
 //import { RoughnessMipmapper } from './threejs/examples/jsm/utils/RoughnessMipmapper.js';
+/*     scene
+ *       |
+ *     jlObjs, gltf.scene
+ *       |
+ *     modelObj,  ptsGroups                  
+ *                    |
+ *        ptsGroups['tempPtrGrp'], ptsGroups['手少阴心经'], ...
+ *                                       |
+ *                     Groups['P_手少阴心经'], Groups['L_手少阴心经'] or Groups['PS_手少阴心经']
+ *                            |                        |                        |
+ *                         THREE.Mesh ...      THREE.CatmullRomCurve3 ,,,    THREE.Points ...
+ */
 
-var scene, camera, renderer, canvas, raycaster, orbitCtrl, transformControl, labelSize,
-	labelContainer, labels,
-	activeJL;
+var scene, camera, renderer, canvas, raycaster, orbitCtrl, transformControl, 
+	labelSize, labelContainer, labels;
 
 // JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
 jlObjs.name='jingluo Objs';
 
-//keep the model object variable for easy reference. it is added to jlObjs
+//keep the model object variable for easy reference. It is added to jlObjs
 var modelObj;
 
-//group points by line name 
-var ptsGroups = new THREE.Group(); //('ptr grp by JL');  //THREE.Object3D();   //{};  //   new Map();
+//All objects (JL line, particles sys(for simulating flow of energy), XueWeis'') of the same JingLuo 
+//are grouped into a group of the corresponding JL name, which are all children to ptsGroups 
+var ptsGroups = new THREE.Group(); 
 ptsGroups.name='ptr Groups';
 //example lines['bla'] = new THREE.Group();
 jlObjs.add(ptsGroups);
 
+/*to be cleaned?20210806:
 //particle systems for simulating flow.
 var ptrObjs = new THREE.Object3D();  
 ptrObjs.name='particles';
+*/
 
 //try use 2D HTML div for labeling (instead of Sprite) 
 function initPointLabels(elemID){
@@ -365,7 +379,7 @@ function startAnimation() {
 	if (delta > interval) {
 		then = now;
 		
-		updateParticles();
+		updateAllParticleSys();
 		render();
 	}
 	animationId=requestAnimationFrame( startAnimation );
@@ -483,26 +497,37 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 	return lines;
 }
 
-function createPointsOfJL(lName, ptrLst, color){
-	////If the point group for this JingLuo not created yet, create it. 
-	//if(ptsGroups[lName] == null){
-	//	console.log(ptsGroups);
-		ptsGroups[lName] = new THREE.Group();
-		ptsGroups[lName].name=lName;
-		ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
-	//	console.log(ptsGroups);
-	//}
-
-	//console.log("point co:", ptPos);
-	ptrLst.forEach(p=>{
-		createPtsOfSubLine(p);
+function getSubGroupOfJL(jlName, sub){
+	var parent = ptsGroups.getObjectByName(jlName, true);
+	if(!parent){
+		parent = new THREE.Group();
+		parent.name=jlName;
+		ptsGroups.add(parent);   //remember to add to ptsGroups, which is in scene
+	}
+	var subGrp = ptsGroups.getObjectByName(sub+jlName, true);
+	if(!subGrp){
+		subGrp = new THREE.Group();
+		subGrp.name=sub+jlName;
+		parent.add(subGrp);   //remember to add to ptsGroups, which is in scene
+	}
+	return subGrp;
+}
+function createPointsOfJL(lName, ptrGrp, color){
+/*	ptsGroups[lName] = new THREE.Group();
+	ptsGroups[lName].name=lName;
+	ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
+*/
+	let pGrp = getSubGroupOfJL(lName, 'P_');
+	ptrGrp.forEach(lst=>{
+		createPtsOfSubLine(lst, pGrp);
 		});
-	function createPtsOfSubLine(plst){
-	plst.forEach(p=>{
+	function createPtsOfSubLine(lst, grp){
+	lst.forEach(p=>{
 		let [xwName, seq, co, isXW]=p;
 		//let pt=create3DPoint(xwName +" "+seq, co, {color: 0x0000ff});
 		let pt=create3DPoint(xwName +" "+seq, co, {color: new THREE.Vector4(color.r, color.g, color.b, 0.5)});
-		ptsGroups[lName].add(pt);
+		//ptsGroups[lName].add(pt);
+		grp.add(pt);
 			//}
 	});
 	}
@@ -511,17 +536,19 @@ function createPointsOfJL(lName, ptrLst, color){
 function createLinesOfJL(jlName, ptrGrp, color){
 	//ptrLst:  [ [ptr1, ptr2, ..], [ptr4, ptr5, ...], ... ]
 	//console.log('show JL');
+	let grpL = getSubGroupOfJL(jlName, 'L_');
+
 	ptrGrp.forEach((p,i)=>{
-		createSubLine(p);
+		createSubLine(jlName, i, p);
 	});
-	function createSubLine(subLinePtrs){
+	function createSubLine(name, n, subLinePtrs){
 		let points=[];
 		subLinePtrs.forEach((p,i)=>{
 			let [xwName, seq, co, isXW]=p;
 			//if(isXW)
 				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
 		});
-		createCurve(points, new THREE.Vector3(0,0,0), jlName);
+		createCurve(points, new THREE.Vector3(0,0,0), name+n);
 	}
 	function createCurve(ptsLst, loc, nm){
 		let curve = new THREE.CatmullRomCurve3(ptsLst, false);  
@@ -542,20 +569,22 @@ function createLinesOfJL(jlName, ptrGrp, color){
 		curveObject.name=nm;
 		//DOING 2021.07.14 ]can i just add to
 		//jlObjs.add(curveObject);
-		ptsGroups[nm].add(curveObject) ;
+		//ptsGroups[nm].add(curveObject) ;
+		grpL.add(curveObject) ;
 	}		
 }
 
-function createParticlesOfJL(jlName, ptrGrps, color, size){
-	let pathLen="length: "
-	if(ptrGrps.length>0){
-		ptrGrps.forEach((p,i)=>{
-			createSubParticles(p);
-		});
-	}
+function createParticleSysOfJL(jlName, pGrps, color, size){
+	let pathLen="length: "   ;  //for dev info only
+
+	let grpPS = getSubGroupOfJL(jlName, 'PS_');
+
+	pGrps.forEach((p,i)=>{
+		createSubParticleSys(p, i);
+	});
 	$("#curvLen").html(pathLen);
 
-	function createSubParticles(pLst) {
+	function createSubParticleSys(pLst, num) {
 		let points=[];
 		pLst.forEach((p,i)=>{
 			let [xwName, seq, co, isXW]=p;
@@ -564,8 +593,7 @@ function createParticlesOfJL(jlName, ptrGrps, color, size){
 		});
 
 		let curve = new THREE.CatmullRomCurve3(points, false);  
-		//curve.curveType = "centripetal";
-		//curve.closed = false;
+		//curve.curveType = "centripetal"; curve.closed = false;
 		
 		//TODO20210716: may use length to decide how many points
 		let len=curve.getLength();
@@ -583,13 +611,13 @@ function createParticlesOfJL(jlName, ptrGrps, color, size){
 			idArray.push (i);       //create sequence id; to be used for animate flowing by verying blrightness of partices
 			i += 1.0;
         } );
-		drawParticles(jlName,   
+		createParticleSys(jlName+'_'+num,   
             		pArray,  
             		cArray, 
             		sArray,
 					idArray);	
 	}
-	function drawParticles(lName, pArray, cArray, sArray, idArray ){
+	function createParticleSys(lName, pArray, cArray, sArray, idArray ){
 	//let  uniforms = {    
 	//		texture: { value: new THREE.TextureLoader().load( "particle.png" ) },
 	//		del: 	 { type: "f", value: 0.9 }
@@ -629,42 +657,39 @@ function createParticlesOfJL(jlName, ptrGrps, color, size){
 	    parGeo.setAttribute( 'size', new THREE.Float32BufferAttribute(sArray,1 ) );  
 	    parGeo.setAttribute( 'id', new THREE.Float32BufferAttribute(idArray,1 ) );  
 	    
-	    /*let */parSys = new THREE.Points( parGeo, parMaterial );
+	    let parSys = new THREE.Points( parGeo, parMaterial );
 	    parSys.name=lName;
 	    //parSys.position.set(pts.position.x,pts.position.y,pts.position.z);
 	    parSys.sortParticles = false;
 	    parSys.dynamic = true;
-	    //ptrObjs.add(parSys);
-		ptsGroups[lName].add(parSys) 
-		//scene.add(parSys) 
+
+		//ptsGroups[jlName].add(parSys) 
+		grpPS.add(parSys) 
 	}
 }    
-var parSys;
-function updateParticles(){ 
-/*	if (del==3.){
-		del=0.;
-	}else{
-		del=(del+1.);
-	}
-	*/
-	/*ptrObjs.children.forEach((child, ndx) => {
-		child.material.uniforms.del.value=del * 0.3;
-		child.needsUpdate = true;
-	})*/
-	//ptsGroups[lName].add(parSys)
-	ptsGroups.children.forEach(e=>{
-		let pSys=e.getObjectByProperty("type", "Points");  //each JL has only one particle sys.
-		let del = pSys.material.uniforms.tick.value;
+//var parSys;
+function updateAllParticleSys(){ 
+	ptsGroups.children.forEach(jl=>{
+		//let pSys=lSys.getObjectByProperty("type", "Points");  //each JL has only one particle sys.
+		//updateParticleSys(pSys);
+		jl.children.forEach(jlSub=>{
+			if(jlSub.name.startsWith("PS")){
+				jlSub.children.forEach(ps=>{
+					updateParticleSys(ps);
+				});
+			}
+		});
+	});
+	function updateParticleSys(ps){
+		let del = ps.material.uniforms.tick.value;
 		if (del==3.){
 			del=0.;
 		}else{
 			del=(del+1.);
 		}
-		pSys.material.uniforms.tick.value = del;
-		pSys.needsUpdate = true;
-	});
-	
-	//parSys.needsUpdate = true;
+		ps.material.uniforms.tick.value = del;
+		ps.needsUpdate = true;
+	}
 }
 
 function clearGroup(name){
@@ -674,79 +699,80 @@ function clearGroup(name){
 }
 
 function updateLabels() {
-	let tempLabelPos=[];
-	let tempV = new THREE.Vector3();  
+	var tempLabelPos=[];
+	var tempV = new THREE.Vector3();  
 
 	camera.updateMatrixWorld(true, false);  //? 
+	var rect = renderer.domElement.getBoundingClientRect();
  
 	 //remove all the labels
 	$('#labels').empty();
-
-	let rect = renderer.domElement.getBoundingClientRect();
-	
-	// and then add the new ones 
+	// and then add back with the new coordinations 
 	let isLblOverlap=false;
-	ptsGroups.children.forEach((child, ndx) => {
-	    //const isLast = ndx === lastNdx;
-	    //dumpObject(child, lines, isLast, newPrefix);
-	    //console.log(child.name);
-	    child.children.forEach((ch, ix) => {
-		    //console.log(ch.name + ':' + ch.position.x + ',' + ch.position.y  + ',' + ch.position.z);
-			//-------------
-		    ch.updateWorldMatrix(true, false);
-		    ch.getWorldPosition(tempV);
-		    //Projects this vector from world space into the camera's normalized device coordinate (NDC) space
-		    tempV.project(camera);
-		
-		    // determine if it is between camera and the body model.
-		    raycaster.setFromCamera(tempV, camera);
-	        //let modelObj = scene.getObjectByName("asian_female_teen", true);
-    		const intersectedObjects = raycaster.intersectObjects([ch, modelObj], true);
-    		// This object is visible only if it is the first.
-    		const show = intersectedObjects.length && ch === intersectedObjects[0].object;
-
-			if(show){
-				//if this one overlaps existing one, 
-				for (const e of tempLabelPos){
-				  	//console.log(ch.name, Math.abs(e[0]-tempV.x), Math.abs(e[1]-tempV.y));
-				
-				   	isLblOverlap=false;
-				   	if((Math.abs(e[0]-tempV.x) < labelSize)&&(Math.abs(e[1]-tempV.y) < labelSize)){
-						//console.log("skip");
-						isLblOverlap=true;
-				   		break;
-				   	};
-				}
-				//create and show it only if not overlaped
-				if(!isLblOverlap){ 
-				   	tempLabelPos.push([tempV.x, tempV.y]);
-			        const x = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
-			        const y = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
-				    //console.log('coord:', x, y);
-				    
-					//create an HTML element for it 
-					const elem = document.createElement('div');
-					elem.id = ch.name;
-					//elem.textContent = sText;
-					//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
-					elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
-	
-			        elem.style.display = '';
-			        // get the note coordinate
-				
-			        // move the elem to that position
-			        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
-			        elem.style.transform = `translate(${x}px,${y}px)`;
-			        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
-					 
-			        // set the zIndex for sorting
-			        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
-				
-					labelContainer.appendChild(elem);
-				}
+	ptsGroups.children.forEach((child, ndx) => {   //each JingLuo
+		child.children.forEach(CofJL=>{
+			if(CofJL.name.startsWith('P_')){
+				let pts = CofJL.children;
+				pts.forEach((c, x)=>{
+					updateLabel(c, x);
+				});
 			}
-		});	 
+		});
 	});
+	function updateLabel(ch,x){
+	    ch.updateWorldMatrix(true, false);
+		ch.getWorldPosition(tempV);
+		//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
+		tempV.project(camera);
+		
+		// determine if it is between camera and the body model.
+		raycaster.setFromCamera(tempV, camera);
+	    //let modelObj = scene.getObjectByName("asian_female_teen", true);
+    	const intersectedObjects = raycaster.intersectObjects([ch, modelObj], true);
+    	// This object is visible only if it is the first.
+    	const show = intersectedObjects.length && ch === intersectedObjects[0].object;
+
+		if(show){
+			//if this one overlaps existing one, 
+			for (const e of tempLabelPos){
+			  	//console.log(ch.name, Math.abs(e[0]-tempV.x), Math.abs(e[1]-tempV.y));
+				
+			   	isLblOverlap=false;
+			   	if((Math.abs(e[0]-tempV.x) < labelSize)&&(Math.abs(e[1]-tempV.y) < labelSize)){
+					//console.log("skip");
+					isLblOverlap=true;
+			   		break;
+			   	};
+			}
+			//create and show it only if not overlaped
+			if(!isLblOverlap){ 
+			   	tempLabelPos.push([tempV.x, tempV.y]);
+		        const x = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+		        const y = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
+			    //console.log('coord:', x, y);
+				    
+				//create an HTML element for it 
+				const elem = document.createElement('div');
+				elem.id = ch.name;
+				//elem.textContent = sText;
+				//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
+				elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
+	
+		        elem.style.display = '';
+		        // get the note coordinate
+				
+		        // move the elem to that position
+		        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+		        elem.style.transform = `translate(${x}px,${y}px)`;
+		        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
+					 
+		        // set the zIndex for sorting
+		        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
+				
+				labelContainer.appendChild(elem);
+			}
+		}	
+	}
 }
 //2021.07.12--------------
 function removeStickModifier(){
@@ -839,8 +865,8 @@ function resizeRendererToDisplaySize(renderer) {
 */
 
 export {labelSize, renderer, init3D, loadGLTF, render,
-createPointsOfJL, createLinesOfJL,createParticlesOfJL,
-clearGroup, updateParticles,
+createPointsOfJL, createLinesOfJL,createParticleSysOfJL,
+clearGroup, updateAllParticleSys,
 setupFreeModifier, removeFreeModifier, 
 setupStickModifier, removeStickModifier,
 removeNewPointEditor, 
