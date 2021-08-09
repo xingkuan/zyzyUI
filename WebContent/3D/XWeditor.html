@@ -41,18 +41,20 @@
 <div style="display:flex">
 	<div id="jlCheckBox" style="width:120px"></div>
 	<div id="container" class="container" style="float:left">
-		<div id="xx"  style="postition:relative;background:black; color:white">
+		<div id="modelSel"  style="postition:relative;background:black; color:white">
 			Model: <select id = "selectModel">
 				<option value="" disabled selected>Select model</option>
 				<option value = "as_fem2.glb:asian_female_teen">asian female</option>
 				<option value = "NOT:YET">asian male</option>
 			</select><br>
+			<div id="editorSel"   style="postition:relative;background:black; color:white">
 			<span id="jlName"></span>
 			<!-- button id="hookupTransformCtrl">Hookup Transform Controller</button   -->
 			<input type="radio" id="edNone" name="edMode" class="edMode" value="none" checked><label for="edMode">none</label> 
 			<input type="radio" id="edNew" name="edMode" class="edMode" value="new"><label for="edMode">new</label> 
 			<input type="radio" id="edSMove" name="edMode" class="edMode" value="sticky modifier"><label for="edMode">mod s.</label> 
-			<input type="radio" id="edFMove" name="edMode" class="edMode" value="free modifier"><label for="edMode">mod f.</label> 
+			<input type="radio" id="edFMove" name="edMode" class="edMode" value="free modifier"><label for="edMode">mod f.</label>
+			</div> 
 		</div>
 
 		<canvas id="c"></canvas>
@@ -78,7 +80,7 @@
 //import * as THREE from './threejs/build/three.module.js'
 
 import {init3D, loadGLTF, render, createPointsOfJL, createLinesOfJL, 
-	clearGroup,
+	clearAllJLs,clearJL,
 	removeNewPointEditor,
 	setupClickHandler,
 	initPointLabels
@@ -91,6 +93,9 @@ $("#selectModel").on('change', function(){
 	let [fname, mname]=val.split(':');
 	//alert(val);
 	initWorkspace(fname, mname);
+
+//	$(".chkJLname").show();
+	$("#editorSel").show();
 });
 
 var modelName, jlNum;
@@ -107,43 +112,71 @@ if(w>h/a_ratio){
 	$("#container").height(h);
 }
 
-//Then, list all the JingLuos(group of check box) to the on the left side:
-populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
-	function(e){
-		let name=e["name"];
-		let seq=e["seq"];
-    	$('#jlCheckBox')
-        .append(`<input type="radio" id="${name}" class="chkJLname" name="chkJLname" value="${seq}">`)
-        .append(`<label for="${name}">${name}</label>`)
-        .append(`<br>`);
-	});  
+function initJLlist(divID, mode){
+	$(divID).empty();
+
+	populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
+		function(e){
+			let name=e["name"];
+			let seq=e["seq"];
+    		$(divID)            //$('#jlCheckBox')
+        	.append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}">${name}`)
+	        .append(`<br>`);
+		});  
 //... and setup the corresponding click event handler:
-$('.chkJLname').click(function(e){
-  jlNum = $(this).val();
-  let name=$(this).attr("id");
-  $("#jlName").text(name);
-  //setup JL line name in the popup 
-  $("#uiLine").text(name); 
-  $("#uiPoint").val("");
-  //load XueWei and JL into 3D
-  loadJL(name);
+	$('.chkJLname').click(function(e){
+	  jlNum = $(this).val();
+	  let name=$(this).attr("id");
+	  if(mode==0){  //when check on one, all others are unchecked
+		//UI
+		$('.chkJLname').prop("checked", false);  //de-select all
+	    $(this).prop("checked", true);           //...and select the current clicked 
+		//data
+		$("#jlName").text(name);
+		//setup JL line name in the popup 
+		$("#uiLine").text(name); 
+		$("#uiPoint").val("");
+		//load XueWei and JL into 3D; but only one at a time
+		clearAllJLs(); 
+	  	loadJL(name);
+	  }else{   
+		if(!$(this).is(":checked")){  //uncheck event
+        	clearJL(val);
+	  	}else{             //check event
+	 		//load XueWei and JL into 3D
+			$("#jlName").text('');  //no need of it
+			//load XueWei and JL into 3D
+			loadJL(name);
+		}
+	  }
 	
-  render();
-});
+	  render();
+	});
+}
 
 //hookup click hander for different editing mode
 $('.edMode').click(function(e){
   var val = $(this).val();
-  //alert(val);
+
+  $("#jlName").text('');
+  clearAllJLs();
   setupClickHandler(val);
+  //also, for "new", only one JingLuo can be selected
+  switch(val){	
+		case "new":
+			initJLlist('#jlCheckBox', 0);
+			break;
+		default:
+			initJLlist('#jlCheckBox', 1);
+  }
+  render();
 });
 
 //setup the popup dialog
 setupPopup()  ;
 
-//also, diable both , initially
-$(".chkJLname").attr("disabled", true);
-$(".edMode").attr("disabled", true);
+//$(".chkJLname").hide();
+$("#editorSel").hide();
 
 
 /////////////////////////////////////////////////////////
@@ -179,7 +212,7 @@ function loadJL(jlName){
 		ptrList.push(temp);
 
 	//remove all XueWei and JL objects, and working on the currently selected:
-	clearGroup(jlName);
+	//clearAllJLs();
 	if(ptrList.length>0){
 		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
 		createLinesOfJL(jlName, ptrList, {r:0,g:250,b:0});
@@ -189,23 +222,19 @@ function loadJL(jlName){
 function initWorkspace(fname, mname){
 	if(fname=='NOT'){
 		alert("not a real file!");
-		$(".chkJLname").attr("disabled", true);
-		$(".edMode").attr("disabled", true);
+//		$(".chkJLname").attr("disabled", true);
+//		$(".edMode").attr("disabled", true);
 		return;
 	}
 	
 	modelName=mname;
-
+initJLlist('#jlCheckBox', 0);
 	initPointLabels('#labels');
 	init3D('#c', 30);
 	//loadGLTF('as_fem2.glb', "asian_female_teen");
 	loadGLTF(fname, mname);
 	//...and set the initial to none:
 	setupClickHandler('none'); 
-	//
-	$(".chkJLname").attr("disabled", false);
-	$(".edMode").attr("disabled", false);
-	$("#edNone").prop('checked', 'checked');
 }
 
 import {populateField, savePointUI, savePointContent} from './XWJLdata.js';

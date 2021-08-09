@@ -692,9 +692,14 @@ function updateAllParticleSys(){
 	}
 }
 
-function clearGroup(name){
+function clearJL(name){
 	//if (ptsGroups[name])
 	//	ptsGroups[name].clear();
+	let obj=ptsGroups.getObjectByName(name, true);
+	ptsGroups.remove(obj);
+}
+
+function clearAllJLs(){
 	ptsGroups.clear();
 }
 
@@ -866,7 +871,8 @@ function resizeRendererToDisplaySize(renderer) {
 
 export {labelSize, renderer, init3D, loadGLTF, render,
 createPointsOfJL, createLinesOfJL,createParticleSysOfJL,
-clearGroup, updateAllParticleSys,
+clearAllJLs, clearJL,
+updateAllParticleSys,
 setupFreeModifier, removeFreeModifier, 
 setupStickModifier, removeStickModifier,
 removeNewPointEditor, 

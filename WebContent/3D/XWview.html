@@ -50,7 +50,8 @@
 import {populateField} from './XWJLdata.js';
 import {init3D, loadGLTF, render, 
 	createPointsOfJL, createLinesOfJL, createParticleSysOfJL, 
-	clearGroup, updateAllParticleSys,
+	clearAllJLs, clearJL, 
+	updateAllParticleSys, 
 	setupFreeModifier, removeFreeModifier, 
 	setupStickModifier, removeStickModifier, 
 	initPointLabels, startAnimation, stopAnimation
@@ -85,6 +86,8 @@ $("#btnAnimation").click( (e) => {
 	animation($("#btnAnimation").text());
 });
 
+$(".chkJLname").hide();
+
 //set the initial state to 
 animation("stop");
 function animation(tgt){
@@ -99,36 +102,35 @@ function animation(tgt){
 	}
 }
 
-//list all the JingLuos, as group of check box
-populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
+function initJLlist(divID){
+	if ($(divID).children().length >0 )  //has been initalized already; do nothing.
+		return;
+
+	populateField("http://localhost:8080/zyzySvc/STG/getJLs",   
 	function(e){
-		let val=e["name"];
-    	$('#jlCheckBox')
-        .append(`<input type="radio" id="${val}" class="chkJLname" name="name" value="${val}">`)
-        .append(`<label for="${val}">${val}</label>`)
+		let name=e["name"];
+		let seq=e["seq"];
+    	$(divID)            //$('#jlCheckBox')
+        .append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}">${name}`)
         .append(`<br>`);
 	});  
 //... and the click event handler
-$('.chkJLname').click(function(e){
-  var val = $(this).val();
-  //alert(val);
+	$('.chkJLname').click(function(e){
+	  //var val = $(this).val();
+	  let val=$(this).attr("id");
 
-  $("#jlName").text(val);
-
-  //setup JL line name in the popup 
-  $("#uiLine").text(val); 
-  $("#uiPoint").val("");
-
-  $("#dataPtrList").empty();
-
-  //load XueWei and JL into 3D
-  loadJL(val);
-  updateAllParticleSys();
-  render();
-});
-//diable them, initially
-$(".chkJLname").attr("disabled", true);
-
+	  if(!$(this).is(":checked")){
+        clearJL(val);
+	  }else{
+	 	 //load XueWei and JL into 3D
+	  	loadJL(val);
+	  	updateAllParticleSys();
+	  }
+  	render();
+	});
+	//diable them, initially
+	//$(".chkJLname").attr("disabled", true);
+}
 
 function loadJL(jlName){
   let ptr;
@@ -152,7 +154,6 @@ function loadJL(jlName){
 		ptrList.push(temp);
 
 	//remove all XueWei and JL objects, and working on the currently selected:
-	clearGroup(name);
 	if(ptrList.length>0){
 		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
 		createParticleSysOfJL(jlName, ptrList, {r:0,g:250,b:0} , 3.0);
@@ -175,7 +176,8 @@ function initWorkspace(fname, mname){
 	//loadGLTF('as_fem2.glb', "asian_female_teen");
 	loadGLTF(fname, mname);
 
-	$(".chkJLname").attr("disabled", false);
+	//$(".chkJLname").attr("disabled", false);
+	initJLlist('#jlCheckBox');
 }
 
 
