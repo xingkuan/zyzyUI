@@ -16,8 +16,12 @@ import { TransformControls } from "./threejs/examples/jsm/controls/TransformCont
  *                         THREE.Mesh ...      THREE.CatmullRomCurve3 ,,,    THREE.Points ...
  */
 
-var scene, camera, renderer, canvas, raycaster, orbitCtrl, transformControl, 
-	labelSize, labelContainer, labels;
+var scene, camera, renderer, canvas, // raycaster,
+	orbitCtrl, //transformControl, 
+	labelSize, labelContainer, labels
+	;
+var updatedPoints={};
+
 
 // JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
@@ -33,11 +37,6 @@ ptsGroups.name='ptr Groups';
 //example lines['bla'] = new THREE.Group();
 jlObjs.add(ptsGroups);
 
-/*to be cleaned?20210806:
-//particle systems for simulating flow.
-var ptrObjs = new THREE.Object3D();  
-ptrObjs.name='particles';
-*/
 
 //try use 2D HTML div for labeling (instead of Sprite) 
 function initPointLabels(elemID){
@@ -160,23 +159,48 @@ console.log("width:"+c.clientWidth);
   }*/
   
   // ... raycaster and 2D mouse events
-  {
-    raycaster = new THREE.Raycaster();
+  //raycaster=setupRaycaster(e);
+
+	
+//	function onDocumentTouchStart( e ) {
+//		onMouseDown(e);
+//	}
+	//// object picking  
+}
+function getRaycaster(){
+    let raycaster = new THREE.Raycaster();
 	//raycaster.setFromCamera(mouse,camera);
 	raycaster.linePrecision = 0.03;  //two big value can cause "lines" always in the raycaster intersection.
 	raycaster.params.Points.threshold = 0.03;
+	//the normalize mouse coord
+/*	let mouse = new THREE.Vector2();
+	// (left, top) = (-1,-1), (right, top) = (1, -1)
+	//           (middle, middle) = (0,0)
+	// (left, bottom) = (-1,1), (right, top) = (1, 1)
+	let rect = renderer.domElement.getBoundingClientRect();
+	mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
+	mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
 	
-	
-	function onDocumentTouchStart( e ) {
-		onMouseDown(e);
-	}
-	//// object picking  
-  }
+	raycaster.setFromCamera(mouse,camera);
+*/	
+	return raycaster;
 }
 
-function removeNewPointEditor(){
+function resetWorkEnv(){
 	canvas.removeEventListener('pointerup', edNew);
+	canvas.removeEventListener('pointerup', edSticky);
+	canvas.removeEventListener('pointerup', edFree);
+	$("#saveModifiedPts").hide();
+	updatedPoints={};
+	
+	let ctl = getTransformControler();
+	scene.remove(ctl);
+	
+	clearAllJLs();
 }
+//function removeNewPointEditor(){
+//	canvas.removeEventListener('pointerup', edNew);
+//}
 //function setupNewPointEditor(){
 function setupClickHandler(mode){
 	//let xx=getEventListeners(canvas);
@@ -192,11 +216,14 @@ function setupClickHandler(mode){
 			canvas.addEventListener('pointerup', edNew);
 			break;
 		case "sticky modifier":
+			setupStickyModifierListener();
 			canvas.addEventListener('pointerup', edSticky);
 			break;
 		case "free modifier":
+			//setupTransformControler();
+			setupFreeModifierListener();
 			canvas.addEventListener('pointerup', edFree);
-			alert("TODO: free ...");
+			//alert("TODO: free ...");
 			break;
 		default:
 			alert("invalid modifier")
@@ -245,11 +272,11 @@ function edSticky(e){     //""mouseup" events not working, because of the OrbitC
 			pointCameraOnClick(e);
 			break;
 		case 3:
-			stickyModifier(e);
+			//stickyModifier(e);
 			break;
 		default:
 			alert("a strange mouse event");
-		e.preventDefault();
+
 	}
 }
 function edFree(e){     //""mouseup" events not working, because of the OrbitControls!
@@ -262,35 +289,169 @@ function edFree(e){     //""mouseup" events not working, because of the OrbitCon
 			pointCameraOnClick(e);
 			break;
 		case 3:
-			freeModifier(e);
+			//setupFreeModifierListener(e);  //2021.08.09 not having this here feels something is missing
 			break;
 		default:
 			alert("a strange mouse event");
 		e.preventDefault();
 	}
 }
-function stickyModifier(e){
-	alert("TODO: sticky ...");
-}
-function freeModifier(e){
-	alert("TODO: free ...");
+function setupStickyModifierListener(e){
+	const onUpPosition = new THREE.Vector2();
+	const onDownPosition = new THREE.Vector2();
+				
+	canvas.addEventListener( 'pointerdown', onPointerDown );
+	canvas.addEventListener( 'pointerup', onPointerUp );
+	canvas.addEventListener( 'pointermove', onPointerMove );
+	
+	function onPointerDown( event ) {
+		onDownPosition.x = event.clientX;
+		onDownPosition.y = event.clientY;
+	}
+	
+	function onPointerUp() {
+		onUpPosition.x = event.clientX;
+		onUpPosition.y = event.clientY;
+	
+		let transformControl=getTransformControler();
+		if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) 
+			transformControl.detach();
+	}
+	
+	function onPointerMove( event ) {
+		let mouse=getNormalizedMousePos(event);	
+		let raycaster=getRaycaster();
+		raycaster.setFromCamera(mouse,camera);
+		//let jlPtrs = jlObjs.getObjectByName( activeJL );
+		let ptrs=[];
+		ptsGroups.children.forEach(jl=>{          //each JingLuo
+			jl.children.forEach(g =>{          //P, SL, PS ...
+				if(g.name.startsWith('P_'))
+					ptrs=ptrs.concat(g.children);
+			})
+		});
+		let intersects = raycaster.intersectObjects(ptrs, true);
+	
+		let transformControl=getTransformControler();
+	//console.log("onPointerMove(), points: " + ptsGroups.children);
+	//console.log("onPointerMove(), intersects: " + intersects.length);
+		if ( intersects.length > 0 ) {
+			const object = intersects[ 0 ].object;
+	
+			if ( object !== transformControl.object ) {
+				transformControl.attach( object );
+			}
+		}
+		else{                    //202108.09:Not sure if it is needed.
+			transformControl.detach();
+		}
+		render();
+	}
 }
 
-function prepareRaycaster(e){
-	//the normalize mouse coord
-	let mouse = new THREE.Vector2();
-	// (left, top) = (-1,-1), (right, top) = (1, -1)
-	//           (middle, middle) = (0,0)
-	// (left, bottom) = (-1,1), (right, top) = (1, 1)
-	let rect = renderer.domElement.getBoundingClientRect();
-	mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
-	mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-	
-	raycaster.setFromCamera(mouse,camera);
+//function removeTransformControler(){
+//	let obj=scene.getObjectByName("transformCtrl");
+//	if (obj)
+//		scene.remove(obj);
+//}
+function getTransformControler(){
+	//let canvas = renderer.domElement;
+	let obj=scene.getObjectByName("transformCtrl");
+	if (!obj){
+		let transformControl = new TransformControls( camera, canvas );
+		transformControl.name='transformCtrl';
+		transformControl.setSize(0.5);
+		transformControl.addEventListener( 'change', render );
+		transformControl.addEventListener( 'dragging-changed', function ( event ) {
+			orbitCtrl.enabled = ! event.value;
+		} );
+		transformControl.addEventListener( 'objectChange', function () {
+			updateLines();
+		} );
+		scene.add( transformControl );
+	}
+	return obj;
 }
+function setupFreeModifierListener(e){
+//https://threejs.org/examples/webgl_geometry_spline_editor.html
+	const onUpPosition = new THREE.Vector2();
+	const onDownPosition = new THREE.Vector2();
+				
+	canvas.addEventListener( 'pointerdown', onPointerDown );
+	canvas.addEventListener( 'pointerup', onPointerUp );
+	canvas.addEventListener( 'pointermove', onPointerMove );
+	
+	function onPointerDown( event ) {
+		onDownPosition.x = event.clientX;
+		onDownPosition.y = event.clientY;
+	}
+	
+	function onPointerUp() {
+		onUpPosition.x = event.clientX;
+		onUpPosition.y = event.clientY;
+	
+		let transformControl=getTransformControler();
+	//console.log(transformControl.object.position);
+	//console.log(transformControl.pointEnd);
+		if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) 
+			transformControl.detach();
+	}
+	
+	function onPointerMove( event ) {
+		let mouse=getNormalizedMousePos(event);	
+		let raycaster=getRaycaster();
+		raycaster.setFromCamera(mouse,camera);
+		//let jlPtrs = jlObjs.getObjectByName( activeJL );
+		let ptrs=[];
+		ptsGroups.children.forEach(jl=>{          //each JingLuo
+			jl.children.forEach(g =>{          //P, SL, PS ...
+				if(g.name.startsWith('P_'))
+					ptrs=ptrs.concat(g.children);
+			})
+		});
+		let intersects = raycaster.intersectObjects(ptrs, true);
+	
+		let transformControl=getTransformControler();
+	//console.log("onPointerMove(), points: " + ptsGroups.children);
+	//console.log("onPointerMove(), intersects: " + intersects.length);
+		if ( intersects.length > 0 ) {
+			const object = intersects[ 0 ].object;
+	
+			if ( object !== transformControl.object ) {
+				transformControl.attach( object );
+			}
+		}
+		/*else{
+			transformControl.detach();
+		}*/
+		render();
+	}
+}
+
+function updateLines() {
+	//2021.08.09:prototype
+	let ptr=scene.getObjectByName("transformCtrl").object;
+	let name=ptr.name;
+	//let jlLine = ptsGroups.getObjectByName('L_足厥阴肝经');	
+	let grp = ptr.parent;
+	let [t,jlName] = grp.name.split('_');	
+	
+	//add to updatedPoints
+	updatedPoints[jlName+'_'+name]=ptr.position;	
+	//show the save button
+	$("#saveModifiedPts").show();
+	//updateLine('足厥阴肝经', '{r:100, g:100, b:100}');
+	updateLine(jlName, '{r:100, g:100, b:100}');
+}
+
 function pointCameraOnClick( e ) {
 	e.preventDefault();
-	prepareRaycaster(e);
+	let raycaster=getRaycaster();
+	let mouse = getNormalizedMousePos(e);
+	
+	raycaster.setFromCamera(mouse,camera);
+
+	//prepareRaycaster(e);
 	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
 	let intersects = raycaster.intersectObjects([modelObj], true);  //target only the model
 	//console.log("intersected " + intersects.length);
@@ -304,13 +465,24 @@ function pointCameraOnClick( e ) {
 		orbitCtrl.update();
 	}
 }
+function getNormalizedMousePos(e){
+	let mouse = new THREE.Vector2();
+	let rect = renderer.domElement.getBoundingClientRect();
+	mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
+	mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
+	return mouse;	
+}
 function addPointOnClick( e ) {
 	if($('#jlName').text()==''){
 		alert("Please select a JingLuo first.");
 		return;
 	}
 	e.preventDefault();
-	prepareRaycaster(e);
+	let raycaster=getRaycaster();
+	let mouse=getNormalizedMousePos(e);	
+	raycaster.setFromCamera(mouse,camera);
+
+	//prepareRaycaster(e);
 	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
 	let intersects = raycaster.intersectObjects([modelObj], true);
 	if(intersects.length > 0){ 
@@ -496,7 +668,11 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
 	});
 	return lines;
 }
-
+function removeSubGroupOfJL(jlName, sub){
+	let parent = ptsGroups.getObjectByName(jlName, true);
+	let subGrp = ptsGroups.getObjectByName(sub+jlName, true);
+	parent.remove(subGrp);
+}
 function getSubGroupOfJL(jlName, sub){
 	var parent = ptsGroups.getObjectByName(jlName, true);
 	if(!parent){
@@ -513,22 +689,25 @@ function getSubGroupOfJL(jlName, sub){
 	return subGrp;
 }
 function createPointsOfJL(lName, ptrGrp, color){
-/*	ptsGroups[lName] = new THREE.Group();
-	ptsGroups[lName].name=lName;
-	ptsGroups.add(ptsGroups[lName]);   //remember to add to ptsGroups, which is in scene
-*/
 	let pGrp = getSubGroupOfJL(lName, 'P_');
-	ptrGrp.forEach(lst=>{
-		createPtsOfSubLine(lst, pGrp);
+	ptrGrp.forEach((lst, i)=>{
+		createPtsOfSubLine(lst, pGrp, i);
 		});
-	function createPtsOfSubLine(lst, grp){
-	lst.forEach(p=>{
-		let [xwName, seq, co, isXW]=p;
-		//let pt=create3DPoint(xwName +" "+seq, co, {color: 0x0000ff});
-		let pt=create3DPoint(xwName +" "+seq, co, {color: new THREE.Vector4(color.r, color.g, color.b, 0.5)});
-		//ptsGroups[lName].add(pt);
-		grp.add(pt);
-			//}
+	function createPtsOfSubLine(lst, grp, i){
+	lst.forEach((p,j)=>{
+		if(i>0 && j==0){  //subLine's first point is always shared '
+			//find that point, 
+			let p=pGrp.findObjectByName(xwName);
+			p.jlSubLine=p.jlSubLine+","+i;
+		}else{
+			let [xwName, seq, co, isXW]=p;
+			//let pt=create3DPoint(xwName +" "+seq, co, {color: 0x0000ff});
+			let pt=create3DPoint(xwName, co, {color: new THREE.Vector4(color.r, color.g, color.b, 0.5)});
+			pt.jlSubLine=i;
+			pt.jlPtrSeq=seq;
+			//ptsGroups[lName].add(pt);
+			grp.add(pt);
+		}
 	});
 	}
 }
@@ -558,7 +737,7 @@ function createLinesOfJL(jlName, ptrGrp, color){
 		const geometry = new THREE.BufferGeometry().setFromPoints(ps);  //2021.08.13: why not "curve"?
 		const material = new THREE.LineBasicMaterial({
 			//color: 0x00ff00,
-			color: new THREE.Vector4(color.r, color.g, color.b, 0.5),
+			//color: new THREE.Vector4(color.r, color.g, color.b, 0.5),
 			linewidth: 2,
 			transparent: true, opacity: 0.8 ,
 		});
@@ -572,6 +751,36 @@ function createLinesOfJL(jlName, ptrGrp, color){
 		//ptsGroups[nm].add(curveObject) ;
 		grpL.add(curveObject) ;
 	}		
+}
+//2021.08.09:prototype of build JL Line from points in scene. The idea is that it can 
+//be updated automatically when the points is changed. No! that probably would not work!
+//function createLinesOfJLv2(jlName, color){
+function updateLine(jlName, color){
+	//get the points from memory
+	let pGrp = getSubGroupOfJL(jlName, 'P_');
+	let subGrp = [];
+	pGrp.children.forEach(p=>{       //for each points
+		//based on p.jlSubLine, build a list of pts for each line:
+		//console.log(p.name, p.jlSubLine, p.jlPtrSeq);
+		let sl = String(p.jlSubLine).split(',');
+		sl.forEach(i=>{
+			//console.log(i);
+			getGrp(parseInt(i)).push([p.name, p.jlPtrSeq, p.position, true]); //	[e["name"], e["seq"], e['coor'], e['isxw']
+		});
+	}) ;
+	//removeSubGroupOfJL('足厥阴肝经', 'L_');
+	//createLinesOfJL('足厥阴肝经', subGrp, {r:0,g:250,b:0});
+	removeSubGroupOfJL(jlName, 'L_');
+	createLinesOfJL(jlName, subGrp, {r:0,g:250,b:0});
+	
+	function getGrp(i){
+		let grp=subGrp[i];
+		if(!grp){
+			subGrp[i]=[];
+			grp=subGrp[i];
+		}
+		return grp;
+	}
 }
 
 function createParticleSysOfJL(jlName, pGrps, color, size){
@@ -731,7 +940,10 @@ function updateLabels() {
 		tempV.project(camera);
 		
 		// determine if it is between camera and the body model.
+		let raycaster=getRaycaster();
 		raycaster.setFromCamera(tempV, camera);
+		//let raycaster=prepareRaycaster(e);
+		//let raycaster=getRaycaster(e);
 	    //let modelObj = scene.getObjectByName("asian_female_teen", true);
     	const intersectedObjects = raycaster.intersectObjects([ch, modelObj], true);
     	// This object is visible only if it is the first.
@@ -792,70 +1004,7 @@ function setupStickModifier(){
 function removeFreeModifier(){
 	scene.remove(transformControl);
 }
-//https://threejs.org/examples/webgl_geometry_spline_editor.html
-function setupFreeModifier(){
-	//let canvas = renderer.domElement;
-	transformControl = new TransformControls( camera, canvas );
-	transformControl.setSize(0.5);
-	transformControl.addEventListener( 'change', render );
-	transformControl.addEventListener( 'dragging-changed', function ( event ) {
-			orbitCtrl.enabled = ! event.value;
-		} );
-	transformControl.addEventListener( 'objectChange', function () {
-			updateSplineOutline();
-		} );
-	scene.add( transformControl );
 
-	//const splineHelperObjects = [];
-	//const pointer = new THREE.Vector2();
-	const onUpPosition = new THREE.Vector2();
-	const onDownPosition = new THREE.Vector2();
-				
-	canvas.addEventListener( 'pointerdown', onPointerDown );
-	canvas.addEventListener( 'pointerup', onPointerUp );
-	canvas.addEventListener( 'pointermove', onPointerMove );
-	
-	function onPointerDown( event ) {
-		onDownPosition.x = event.clientX;
-		onDownPosition.y = event.clientY;
-	}
-	
-	function onPointerUp() {
-		onUpPosition.x = event.clientX;
-		onUpPosition.y = event.clientY;
-	
-		if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) 
-			transformControl.detach();
-	}
-	
-	function onPointerMove( event ) {
-		let mouse = new THREE.Vector2();
-	
-		let rect = renderer.domElement.getBoundingClientRect();
-	
-		mouse.x = ( ( event.clientX - rect.left ) / ( rect.width - rect.left ) ) * 2 - 1;
-		mouse.y = - ( ( event.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-	
-		raycaster.setFromCamera(mouse,camera);
-		let jlPtrs = jlObjs.getObjectByName( activeJL );
-//TODO: 20210710  need to limit only to the needed objects!  
-		let intersects = raycaster.intersectObjects(jlPtrs.children, true);
-	
-	//console.log("onPointerMove(), points: " + ptsGroups.children);
-	//console.log("onPointerMove(), intersects: " + intersects.length);
-		if ( intersects.length > 0 ) {
-			const object = intersects[ 0 ].object;
-	
-			if ( object !== transformControl.object ) {
-				transformControl.attach( object );
-			}
-		}
-		/*else{
-			transformControl.detach();
-		}*/
-	}
-}
-	
 /*2021.06.16  This is certainly not doing anything !!!
 function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
@@ -869,13 +1018,17 @@ function resizeRendererToDisplaySize(renderer) {
 }
 */
 
-export {labelSize, renderer, init3D, loadGLTF, render,
+export {labelSize,
+updatedPoints,
+ renderer, init3D, loadGLTF, render,
 createPointsOfJL, createLinesOfJL,createParticleSysOfJL,
 clearAllJLs, clearJL,
 updateAllParticleSys,
-setupFreeModifier, removeFreeModifier, 
-setupStickModifier, removeStickModifier,
-removeNewPointEditor, 
+//setupFreeModifier, removeFreeModifier, 
+//setupStickModifier, removeStickModifier,
+//removeNewPointEditor, 
 setupClickHandler,
-initPointLabels, startAnimation, stopAnimation};
+initPointLabels, startAnimation, stopAnimation,
+resetWorkEnv
+};
 //export {canvas, camera, scene, renderer, CameraCtrl, labelSize, initGlobalVars};

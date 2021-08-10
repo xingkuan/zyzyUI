@@ -9,7 +9,7 @@ function populateField(url, fn){
 		async: false,
         data: "",
         success: function(data) {
-        	console.log(data);
+        	//console.log(data);
         	if(data != null){
     		//json=JSON.parse(data);
     		//json.forEach(function(val){
@@ -48,6 +48,39 @@ function savePointUI(fn) {
 		}
 	})
 }
+
+function updatePoint3Dcoor(modelName, jl, name, coor){
+	let	url="http://localhost:8080/zyzySvc/XW/updateCoor";
+	
+	let obj={"model_name":modelName,
+				"line_name":jl,
+				"name":name,
+				"coor":coor
+			};
+	let json= JSON.stringify(obj);
+	
+	$.ajax({
+		type : 'POST',
+		async: false,
+		url : url,
+		contentType : 'application/text',
+		dataType : "text",
+		//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
+		data : json,
+		success : function(data, textStatus, jqXHR) {
+			//$('#srcContent').val('note created successfully');
+			//alert('... here');
+            //window.location = window.location.href;
+            //loadPage(srcId, srcSeq);
+            //location.reload();
+            //window.location = thisUrl;
+		},
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + textStatus + errorThrown);
+		}
+	})
+}
+
 function savePointContent(fn) {
 	let	url="http://localhost:8080/zyzySvc/STG/srcSaveNewVersion";
 	$.ajax({
@@ -89,6 +122,6 @@ function buildJLpath(jl){
 
 
 
-export {populateField, savePointUI, savePointContent};
+export {populateField, savePointUI, savePointContent, updatePoint3Dcoor};
 
 

@@ -54,6 +54,7 @@
 			<input type="radio" id="edNew" name="edMode" class="edMode" value="new"><label for="edMode">new</label> 
 			<input type="radio" id="edSMove" name="edMode" class="edMode" value="sticky modifier"><label for="edMode">mod s.</label> 
 			<input type="radio" id="edFMove" name="edMode" class="edMode" value="free modifier"><label for="edMode">mod f.</label>
+			<button type="button" id="saveModifiedPts" style="display:inline-block;">save</button>
 			</div> 
 		</div>
 
@@ -79,11 +80,12 @@
 <script type="module">
 //import * as THREE from './threejs/build/three.module.js'
 
-import {init3D, loadGLTF, render, createPointsOfJL, createLinesOfJL, 
+import {init3D, updatedPoints,
+loadGLTF, render, createPointsOfJL, createLinesOfJL, 
 	clearAllJLs,clearJL,
-	removeNewPointEditor,
+//	removeNewPointEditor,
 	setupClickHandler,
-	initPointLabels
+	initPointLabels, resetWorkEnv
 } from './3Dcommons.js';
 
 // setup model selection
@@ -99,6 +101,7 @@ $("#selectModel").on('change', function(){
 });
 
 var modelName, jlNum;
+$("#saveModifiedPts").hide();
 
 //Firstly, let's size container properly: 
 let a_ratio=1.5;
@@ -123,11 +126,11 @@ function initJLlist(divID, mode){
         	.append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}">${name}`)
 	        .append(`<br>`);
 		});  
-//... and setup the corresponding click event handler:
+    //... and setup the corresponding click event handler:
 	$('.chkJLname').click(function(e){
 	  jlNum = $(this).val();
 	  let name=$(this).attr("id");
-	  if(mode==0){  //when check on one, all others are unchecked
+	  if(mode==0){  //in mode 0, (adding "new"): only one JingLuo can be active at a time.
 		//UI
 		$('.chkJLname').prop("checked", false);  //de-select all
 	    $(this).prop("checked", true);           //...and select the current clicked 
@@ -141,7 +144,7 @@ function initJLlist(divID, mode){
 	  	loadJL(name);
 	  }else{   
 		if(!$(this).is(":checked")){  //uncheck event
-        	clearJL(val);
+        	clearJL(name);
 	  	}else{             //check event
 	 		//load XueWei and JL into 3D
 			$("#jlName").text('');  //no need of it
@@ -159,7 +162,8 @@ $('.edMode').click(function(e){
   var val = $(this).val();
 
   $("#jlName").text('');
-  clearAllJLs();
+  //clearAllJLs();
+  resetWorkEnv();
   setupClickHandler(val);
   //also, for "new", only one JingLuo can be selected
   switch(val){	
@@ -171,6 +175,17 @@ $('.edMode').click(function(e){
   }
   render();
 });
+
+//save for "free point modifier" and "sticky point modifier"
+$('#saveModifiedPts').click( ()=>{
+	for(var k in updatedPoints){
+		console.log(k, updatedPoints[k]);
+		let [jl, name]=k.split('_');
+		let coor=updatedPoints[k];
+		updatePoint3Dcoor(modelName, jl, name, coor); 
+	}
+});
+
 
 //setup the popup dialog
 setupPopup()  ;
@@ -211,8 +226,6 @@ function loadJL(jlName){
 	if(temp.length>0)
 		ptrList.push(temp);
 
-	//remove all XueWei and JL objects, and working on the currently selected:
-	//clearAllJLs();
 	if(ptrList.length>0){
 		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
 		createLinesOfJL(jlName, ptrList, {r:0,g:250,b:0});
@@ -237,7 +250,9 @@ initJLlist('#jlCheckBox', 0);
 	setupClickHandler('none'); 
 }
 
-import {populateField, savePointUI, savePointContent} from './XWJLdata.js';
+import {populateField, savePointUI, savePointContent,
+updatePoint3Dcoor
+} from './XWJLdata.js';
 
 //initModelCtrl();  //2021.06.03 leave it in loadGLTF(), because of the nature of asynchronous. 
 //2021.06.10 Do not animate. re-render only upand mouse events
