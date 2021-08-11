@@ -52,8 +52,6 @@ import {init3D, loadGLTF, render,
 	createPointsOfJL, createLinesOfJL, createParticleSysOfJL, 
 	clearAllJLs, clearJL, 
 	updateAllParticleSys, 
-	setupFreeModifier, removeFreeModifier, 
-	setupStickModifier, removeStickModifier, 
 	initPointLabels, startAnimation, stopAnimation
 } from './3Dcommons.js';
 
@@ -171,7 +169,7 @@ function initWorkspace(fname, mname){
 	
 	modelName=mname;
 
-	initPointLabels('#labels');
+	initPointLabels('#labels', false);
 	init3D('#c', 30);
 	//loadGLTF('as_fem2.glb', "asian_female_teen");
 	loadGLTF(fname, mname);

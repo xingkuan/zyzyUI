@@ -18,8 +18,9 @@ import { TransformControls } from "./threejs/examples/jsm/controls/TransformCont
 
 var scene, camera, renderer, canvas, // raycaster,
 	orbitCtrl, //transformControl, 
-	labelSize, labelContainer, labels
+	labelSize, labelContainer//, labels
 	;
+var isEditor=true;
 var updatedPoints={};
 
 
@@ -39,11 +40,12 @@ jlObjs.add(ptsGroups);
 
 
 //try use 2D HTML div for labeling (instead of Sprite) 
-function initPointLabels(elemID){
+function initPointLabels(elemID, isE){
 	//const labelContainer = document.querySelector('#labels');
 	labelContainer = document.querySelector(elemID);
 	//labelContainer = $(elemID);
-	labels = [];
+	//labels = [];
+	isEditor=isE;
 }
 
 
@@ -62,8 +64,9 @@ console.log("width:"+c.clientWidth);
 	renderer.outputEncoding = THREE.sRGBEncoding;
  
 	canvas = renderer.domElement;
-	labelSize=lblSize/canvas.clientWidth;
-
+	//labelSize=lblSize/canvas.clientWidth;
+	labelSize=lblSize;
+	
   const fov = 45;
   const aspect = 2;  // the canvas default
   const near = 30;
@@ -167,6 +170,16 @@ console.log("width:"+c.clientWidth);
 //	}
 	//// object picking  
 }
+
+//*** NDC, normalized device coordinates: the x, y, z coordinates range over [-1,1] *** 
+// (left, top) = (-1,-1), (right, top) = (1, -1)
+//           (middle, middle) = (0,0)
+// (left, bottom) = (-1,1), (right, top) = (1, 1)
+//the z coordinate in NDC: Since we've projected from 3D to 2D, aren't all the z values the same? 
+//Actually, the projection process retains the information about how far the point is by retaining 
+//the z coordinate. The view plane (the near plane) corresponds to an NDC z coordinate of -1, 
+//and the far plane to an NDC z coordinate of +1.
+
 function getRaycaster(){
     let raycaster = new THREE.Raycaster();
 	//raycaster.setFromCamera(mouse,camera);
@@ -174,9 +187,6 @@ function getRaycaster(){
 	raycaster.params.Points.threshold = 0.03;
 	//the normalize mouse coord
 /*	let mouse = new THREE.Vector2();
-	// (left, top) = (-1,-1), (right, top) = (1, -1)
-	//           (middle, middle) = (0,0)
-	// (left, bottom) = (-1,1), (right, top) = (1, 1)
 	let rect = renderer.domElement.getBoundingClientRect();
 	mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
 	mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
@@ -705,6 +715,8 @@ function createPointsOfJL(lName, ptrGrp, color){
 			let pt=create3DPoint(xwName, co, {color: new THREE.Vector4(color.r, color.g, color.b, 0.5)});
 			pt.jlSubLine=i;
 			pt.jlPtrSeq=seq;
+			if(!isEditor && pt.name.startsWith('x'))
+				pt.visible=false;
 			//ptsGroups[lName].add(pt);
 			grp.add(pt);
 		}
@@ -916,6 +928,10 @@ function updateLabels() {
 	var tempLabelPos=[];
 	var tempV = new THREE.Vector3();  
 
+	let pArr=[[],[]];
+	let lblNormSizeX=labelSize/canvas.clientWidth;
+	let lblNormSizeY=labelSize/canvas.clientHeight;
+
 	camera.updateMatrixWorld(true, false);  //? 
 	var rect = renderer.domElement.getBoundingClientRect();
  
@@ -927,13 +943,20 @@ function updateLabels() {
 		child.children.forEach(CofJL=>{
 			if(CofJL.name.startsWith('P_')){
 				let pts = CofJL.children;
-				pts.forEach((c, x)=>{
-					updateLabel(c, x);
+				pts.forEach((c, i)=>{             //each point
+					if( !isEditor &&
+					    c.name.startsWith('x')){
+						//do nothing.							
+					}else{
+						addPointToList(c, i);
+					}
 				});
 			}
 		});
 	});
-	function updateLabel(ch,x){
+	createAndAddLbls(pArr);
+
+	function addPointToList(ch, i){
 	    ch.updateWorldMatrix(true, false);
 		ch.getWorldPosition(tempV);
 		//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
@@ -949,8 +972,22 @@ function updateLabels() {
     	// This object is visible only if it is the first.
     	const show = intersectedObjects.length && ch === intersectedObjects[0].object;
 
-		if(show){
-			//if this one overlaps existing one, 
+		if(show &&
+		  tempV.x >-1 && tempV.x < 1 &&
+		  tempV.y >-1 && tempV.y < 1 
+		){
+			//**********************DEVL*****
+			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
+			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
+			//console.log(ch.name, x, y);
+			//the range will be 0 to 2 ?
+if(!pArr[x])
+	pArr[x]=[];	
+const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
+pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
+			//**********************DEVL*****
+/*			//if this one overlaps existing one, 
 			for (const e of tempLabelPos){
 			  	//console.log(ch.name, Math.abs(e[0]-tempV.x), Math.abs(e[1]-tempV.y));
 				
@@ -988,8 +1025,31 @@ function updateLabels() {
 				
 				labelContainer.appendChild(elem);
 			}
+*/
 		}	
 	}
+		function createAndAddLbls(arrOfPts){
+			arrOfPts.forEach(row=>{  //row
+				row.forEach(col=>{
+					let [name, seq, x, y]=col;
+					//console.log(name);
+					const elem = document.createElement('div');
+					elem.id = name+"_"+seq;
+					const tt = isEditor?name+"_"+seq:name;
+					elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + name + '\');">' + tt + '</a>';
+			        elem.style.display = '';
+			        // move the elem to that position
+			        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+			        elem.style.transform = `translate(${x}px,${y}px)`;
+			        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
+						 
+			        // set the zIndex for sorting
+			        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
+					
+					labelContainer.appendChild(elem);
+				});
+			});
+		}
 }
 //2021.07.12--------------
 function removeStickModifier(){
