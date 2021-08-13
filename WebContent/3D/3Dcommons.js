@@ -531,7 +531,7 @@ function create3DPoint(name, co, ptColor){
 	let ptSph;
 	// the point spot
 	let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
-	let ptMat = new THREE.MeshBasicMaterial( ptColor );
+	let ptMat = new THREE.MeshBasicMaterial({color:ptColor} );
 	ptSph = new THREE.Mesh( ptGeo, ptMat );
 	ptSph.position.set(co['x'], co['y'], co['z']);
 	// ...
@@ -698,7 +698,7 @@ function getSubGroupOfJL(jlName, sub){
 	}
 	return subGrp;
 }
-function createPointsOfJL(lName, ptrGrp, color){
+function createPointsOfJL(lName, ptrGrp, colr){
 	let pGrp = getSubGroupOfJL(lName, 'P_');
 	ptrGrp.forEach((lst, i)=>{
 		createPtsOfSubLine(lst, pGrp, i);
@@ -711,8 +711,9 @@ function createPointsOfJL(lName, ptrGrp, color){
 			p.jlSubLine=p.jlSubLine+","+i;
 		}else{
 			let [xwName, seq, co, isXW]=p;
-			//let pt=create3DPoint(xwName +" "+seq, co, {color: 0x0000ff});
-			let pt=create3DPoint(xwName, co, {color: new THREE.Vector4(color.r, color.g, color.b, 0.5)});
+			//let pt=create3DPoint(xwName +" "+seq, co, {color: 0xff0000});
+			//let pt=create3DPoint(xwName, co, {color: new THREE.Color(color.r, color.g, color.b)});
+			let pt=create3DPoint(xwName +" "+seq, co, colr);
 			pt.jlSubLine=i;
 			pt.jlPtrSeq=seq;
 			if(!isEditor && pt.name.startsWith('x'))
@@ -728,7 +729,8 @@ function createLinesOfJL(jlName, ptrGrp, color){
 	//ptrLst:  [ [ptr1, ptr2, ..], [ptr4, ptr5, ...], ... ]
 	//console.log('show JL');
 	let grpL = getSubGroupOfJL(jlName, 'L_');
-
+	var colr=color;
+	
 	ptrGrp.forEach((p,i)=>{
 		createSubLine(jlName, i, p);
 	});
@@ -748,10 +750,10 @@ function createLinesOfJL(jlName, ptrGrp, color){
 		const ps = curve.getPoints(100);  //get 100 aliquots
 		const geometry = new THREE.BufferGeometry().setFromPoints(ps);  //2021.08.13: why not "curve"?
 		const material = new THREE.LineBasicMaterial({
-			//color: 0x00ff00,
+			color: colr,
 			//color: new THREE.Vector4(color.r, color.g, color.b, 0.5),
 			linewidth: 2,
-			transparent: true, opacity: 0.8 ,
+			transparent: true, opacity: 0.5 ,
 		});
 		let curveObject = new THREE.Line(geometry, material);
 		//curveObject.position.set(pts.position.x,pts.position.y,pts.position.z);
@@ -799,6 +801,7 @@ function createParticleSysOfJL(jlName, pGrps, color, size){
 	let pathLen="length: "   ;  //for dev info only
 
 	let grpPS = getSubGroupOfJL(jlName, 'PS_');
+	var colr=color;
 
 	pGrps.forEach((p,i)=>{
 		createSubParticleSys(p, i);
@@ -818,9 +821,10 @@ function createParticleSysOfJL(jlName, pGrps, color, size){
 		
 		//TODO20210716: may use length to decide how many points
 		let len=curve.getLength();
+		let pointPace=0.1;
 		pathLen = pathLen + len.toString() + ", "
 		//$("#curvLen").html("length:"+len);
-		let numPts=25;
+		let numPts=Math.ceil(len/pointPace);       //25;
 		
 		const ps = curve.getSpacedPoints(numPts);   //20210715: TODO: number of points may better be a parameter.
 
@@ -834,11 +838,11 @@ function createParticleSysOfJL(jlName, pGrps, color, size){
         } );
 		createParticleSys(jlName+'_'+num,   
             		pArray,  
-            		cArray, 
+            	//	cArray, 
             		sArray,
 					idArray);	
 	}
-	function createParticleSys(lName, pArray, cArray, sArray, idArray ){
+	function createParticleSys(lName, pArray, /*cArray,*/ sArray, idArray ){
 	//let  uniforms = {    
 	//		texture: { value: new THREE.TextureLoader().load( "particle.png" ) },
 	//		del: 	 { type: "f", value: 0.9 }
@@ -848,7 +852,8 @@ function createParticleSysOfJL(jlName, pGrps, color, size){
 				derivatives: "#extension GL_OES_standar_derivatives:enable"
 			},
 			uniforms: {    //uniforms,
-			    color: {type: 'vec4', value: new THREE.Vector4(color.r, color.g, color.b, 0.5)},
+			  //  col: {type: 'vec3', value: new THREE.Color(0x00ff00)},  //red
+			    col: {type: 'vec3', value: new THREE.Color(colr)},  //red
 			    tick: { type: 'f', value: 2. },
 			    cycles: { type: 'f', value: 4. },   //light every 4th point, and cycle through to simulate flowing.
 				resulution:{value: new THREE.Vector4()},
@@ -857,15 +862,15 @@ function createParticleSysOfJL(jlName, pGrps, color, size){
 			//fragmentShader: document.getElementById( 'pfshader' ).textContent,
 	 		vertexShader: document.getElementById( 'vertexShader' ).textContent,  
 			fragmentShader: document.getElementById( 'fragmentShader' ).textContent, 
-	        blending: THREE.AdditiveBlending,
+	      //  blending: THREE.AdditiveBlending,
 	        //depthWrite: false,  //?
 	        //
 	        //So first of all, what is depth test? Suppose if you are to draw 2 identical shapes directly in front of you but of different distance to you. In real life, you expect to only see the shape that is closer to you, correct?
 			//Well if you were to try to do this without a depth test, you will only get the desired effect half the time: if the distant object is drawn before the closer object, no problem, same as real life; but if the closer object is drawn before the distance object, oh-oh, the distant object is visible when it should be not. Problematic.
 			//Depth test is a tool built in today's GPUs to allow to get the desired draw output regardless of the order which the objects are drawn. 
 	        //
-	        //transparent: true,  // so it can show throug even if it is under the skin.
-	        //vertexColors: true
+	        transparent: true,  // so it can show throug even if it is under the skin.
+	        vertexColors: true
 		} );
 
 //const parMaterial = new THREE.PointsMaterial( { color: 0x888888 } );

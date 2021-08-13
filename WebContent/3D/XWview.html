@@ -108,20 +108,24 @@ function initJLlist(divID){
 	function(e){
 		let name=e["name"];
 		let seq=e["seq"];
+		let colr=e["meta"];
+		colr=colr.match("color:(.*?)((?=;)|$)");
+		colr=parseInt(colr[1].replace(/^#/, ''), 16);
     	$(divID)            //$('#jlCheckBox')
-        .append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}">${name}`)
+        .append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}" data-color="${colr}">${name}`)
         .append(`<br>`);
 	});  
 //... and the click event handler
 	$('.chkJLname').click(function(e){
 	  //var val = $(this).val();
 	  let val=$(this).attr("id");
+	  let color=$(this).data().color;
 
 	  if(!$(this).is(":checked")){  //uncheck
         clearJL(val);
 	  }else{
 	 	 //load XueWei and JL into 3D
-	  	loadJL(val);
+	  	loadJL(val, color);
 	  	updateAllParticleSys();
 	  }
   	render();
@@ -130,7 +134,7 @@ function initJLlist(divID){
 	//$(".chkJLname").attr("disabled", true);
 }
 
-function loadJL(jlName){
+function loadJL(jlName, color){
   let ptr;
   let ptrList=[], temp=[];  // eg. [ [pt1, pt2 ...], [pt10, pt20, ...]]
 
@@ -153,8 +157,10 @@ function loadJL(jlName){
 
 	//remove all XueWei and JL objects, and working on the currently selected:
 	if(ptrList.length>0){
-		createPointsOfJL(jlName, ptrList, {r:0,g:250,b:0});
-		createParticleSysOfJL(jlName, ptrList, {r:0,g:250,b:0} , 3.0);
+		//createPointsOfJL(jlName, ptrList, 0x0000ff);
+		//createParticleSysOfJL(jlName, ptrList, 0x0000ff, 3.0);
+		createPointsOfJL(jlName, ptrList, color);
+		createParticleSysOfJL(jlName, ptrList, color, 3.0);
 	}
 }
 ;
@@ -208,7 +214,7 @@ varying float tId;
    }
 </script>
 <script type="x-shader/x-fragment" id="fragmentShader">
-  uniform vec4 color;
+  uniform vec3 col;
   //varying vec3 vUv;
   varying float tId;
   uniform float cycles;
@@ -218,14 +224,17 @@ varying float tId;
     //Just as vertex shader, fragment shader must in the end set this variable (gl_FragColor)
     //gl_FragColor = ;   //R,G,B,A
     //gl_FragColor = color;
+    gl_FragColor = vec4(1.0, 1.0, 1.0, .5);  
+
 	if(mod(tId, cycles) == tick){
-//	if(1 == 0){
-//	if(mod(8.,4.) == 0.){  //if(8.%4. == 0){
-	    gl_FragColor = color;
+		//gl_FragColor = vec4(1, 0, 0, 1);  // red
+	    gl_FragColor = vec4(col, 1.0);  //color;
 	} else {
-	    gl_FragColor = vec4(0.0,0.0,0.0,0.0);
-//gl_FragColor = color;
+		//gl_FragColor = vec4(1, 0, 0, 0.2);  // red
+	    gl_FragColor = vec4(col, 0.2);  //color;
 	}
+
+//gl_FragColor = vec4(1, 0, 0, 1);  // red
   }
 </script>
 
