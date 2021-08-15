@@ -1,0 +1,338 @@
+<html lang="en">
+<meta charset="utf-8">
+<head>
+<title>Force layout (with links)</title>
+<script src="jquery/jquery-3.3.1.min.js"></script>
+<script src="d3JS/d3.min.js"></script>
+<script src="neo4j/neo4j-web.js"></script>
+</head>
+
+<style>
+#statement {
+	border-width: 0;
+	margin: 3px;
+	width: 90%;
+	border-style: solid;
+	border-width: 1px;
+	resize: vertical;
+	min-height: 36px;
+	height: 72px;
+	padding: 2;
+	vertical-align: top;
+}
+
+#content {
+	width: 100%;
+	vertical-align: top;
+	border-style: solid;
+	border-width: 1px;
+	padding: 2;
+	margin: 3px;
+	width: 90%;
+	height: 360px;
+	resize: vertical;
+	overflow: auto;
+	font: 12px "Courier New";
+}
+
+#results {
+	width: 100%;
+	vertical-align: top;
+	border-style: solid;
+	border-width: 1px;
+	padding: 2;
+	margin: 3px;
+	width: 90%;
+	height: 100px;
+	overflow: auto;
+	font: 12px "Courier New";
+}
+
+#console {
+	width: 100%;
+	vertical-align: top;
+}
+
+#runButton {
+	height: 20px;
+	border-width: 0;
+	margin: 5px;
+	font: bold 16px "Courier New";
+	cursor: pointer;
+	background-color: #008CC2;
+	color: #FFF;
+}
+
+.node circle{
+  fill: #F0F9D1;
+}
+
+
+line {
+  stroke: #ccc;
+}
+.text {
+	text-anchor: middle;
+	font-family: "Helvetica Neue", Helvetica, sans-serif;
+	fill: #666;
+	font-size: 16px;
+}
+
+.arrowHead {
+	fill: #f00;
+}
+
+circle{
+  fill: #F0F9D1;
+}
+
+</style>
+
+<body>
+
+	<div id="main">
+		<form>
+			<textarea id="statement"></textarea>
+			<input id="runButton" type="button" value="RUN" onclick="run()"
+				onfocus="this.blur()">
+		</form>
+	</div>
+
+	<div id="content"></div>
+
+	<div id="results"></div>
+	<div id="console"></div>
+
+
+
+
+	<script>
+
+
+function idIndex(a,id) {
+	for (var i=0;i<a.length;i++) {
+	    if (a[i].id == id) return i;}
+	return null;
+}
+
+
+
+//var auth = new Buffer(dbusername+':'+dbpassword).toString('base64');
+var auth = btoa('neo4j:lisa');
+var nodes=[], links=[];
+
+function run() {
+     $.ajax({
+	  type: "GET",
+	  contentType:"text/plain",
+	  //contentType:"text/json",
+	  //dataType:"application/json",
+      //headers: {
+      //    'Accept': 'application/json',
+      //    'Content-Type': 'text/plain'
+      //},
+	  url: "http://localhost:8080/zyzySvc/graph/search/thatever",
+	  success: function(data, textStatus, jqXHR){
+	    console.log(data);
+	    //results.innderHTML=JSON.stringify(data, null,2);
+		$('#results').text(data);
+		//data = JSON.parse(data);
+		nodes = data['nodes'];
+		links = data['links'];
+		/*
+	    data.results[0].data.forEach(function (row) {
+	    	row.graph.nodes.forEach(function (n) {
+	    	   if (idIndex(nodes,n.id) == null)
+	    	     nodes.push({id:n.id, label:n.labels[0], title:n.properties.id, cnt:n.properties.cnt});
+	    	   //maybe we can use cnt for something ...
+	    	});
+	    	links = links.concat( row.graph.relationships.map(function(r) {
+	    	   //return {start:idIndex(nodes,r.startNode),end:idIndex(nodes,r.endNode),type:r.type};
+	    	   return {source:idIndex(nodes,r.startNode),target:idIndex(nodes,r.endNode),relation:r.type};
+	    	}));
+	    });
+		*/
+	    D3draw("#content", nodes, links);
+	  },
+	  failure: function(msg){console.log("failed")}
+	});
+}
+
+
+function D3draw(d3DivId, nodes, links){
+	var width = $("#content").innerWidth(), 
+		height=$("#content").innerHeight();
+	
+	var theLinks, theNodes;
+	// setup force simulation
+	var simulation = d3.forceSimulation(nodes)
+	  .force('charge', d3.forceManyBody().strength(-100))
+	  .force('center', d3.forceCenter(width / 2, height / 2))
+	  //.force('link', d3.forceLink().links(links))
+	  .force('link', d3.forceLink())
+	  .on('tick', ticked);
+
+
+var svg = d3.select("#content")
+	.append("svg")
+	.attr("width", width)
+	.attr("height", height)
+	.call(d3.zoom()
+			// .scaleExtent([1 / 2, 4])
+		.on("zoom", function () {
+    		svg.attr("transform", d3.event.transform)
+    	}))
+	.append("g");
+
+//create arrows ...
+var marker = svg.append("svg:defs").append("marker")
+    .attr("id", "arrowHead")
+    .attr("viewBox", "0 0 10 10")
+    .attr("refX", 20)
+    .attr("refY", 5)
+    .attr("markerUnits", "strokeWidth")
+    .attr("markerWidth", 12)
+    .attr("markerHeight", 12)
+    .attr("orient", "auto")
+  .append("svg:path")
+    .attr("d", "M0,0L5,5L0,10L3,5L0,0")
+    .attr("class","arrowHead");
+    
+//sections for links, link texts, nodes
+var gLink = svg
+	.append("svg:g")
+	.attr("class", "links");
+var gLinkText = svg
+	.append("svg:g")
+	.attr("class", "linkLabel");
+
+var gNode = svg
+	.append("svg:g")   // it seems like the nodes can't be in another group 1?
+	.attr("class", "nodes");
+
+
+//updateLinks();
+//updateNodes();
+// about dragging ...
+function dragstarted(d) {
+      if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+}; 
+function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+};
+function dragended(d) {
+      if (!d3.event.active) simulation.alphaTarget(0);
+      //d.fx = null;
+      //d.fy = null;
+};
+function releasenode(d) {
+        d.fx = null;
+        d.fy = null;
+};
+
+function setupNodes() {
+  theNodes = gNode
+  .selectAll('g')
+  .data(nodes)
+  .enter()
+  	.append("g")   
+    .attr("class", "node")
+//adding drag event
+  .call(d3.drag()
+    	.on("start", dragstarted)
+        .on("drag", dragged)
+         .on("end", dragended))
+  ;
+
+  theNodes
+  .append("circle")
+	.attr("r","12")
+//	.attr("fill", "grey")
+  //.on("click", function(d){esSearch(d.name);})
+ .append("svg:title")
+ .text(function(d) { return "content of " + d.title ; });
+
+  theNodes
+  .append("text")
+//    .attr("class", "node")
+//    .call(d3.drag);
+    .text(function(d) { return d.title })
+   .attr("text-anchor", "middle")
+   .attr("style", "font-weight:bold; font-size:12")
+;
+
+
+  
+ // theNodes.exit().remove()  //?
+}
+
+setupNodes();
+
+function updateLinks() {
+  theLinks = gLink
+    .selectAll('line')
+    .data(links);
+  
+  theLinks.enter().append('line')
+    .merge(theLinks)    //?
+    .attr('x1', function(d) { return d.source.x  })   //probably does not matter. They will 
+    .attr('y1', function(d) { return d.source.y  })   //be updated in the ticket() anyway.
+    .attr('x2', function(d) { return d.target.x  })
+    .attr('y2', function(d) { return d.target.y  })
+    .attr("id", function(d) { return "r" + d.source.id + "to" + d.target.id; } )
+    //.attr("class", "link")
+	.attr("marker-end", "url(#arrowHead)");
+   
+  theLinks.append("title")     // seems doesn't do anything?
+  .text(function (d) {return d.relation;});
+   //...don't know why is it so complicated to add title to edgePath!
+edgepaths = svg.selectAll("path")
+            .data(links)
+            .enter()
+            .append('path')
+            .attr('id', function (d, i) {return "r" + d.source.id + "to" + d.target.id})
+           ;
+
+var theEdgeLables = gLinkText
+.selectAll('text')
+.data(links);
+theEdgeLables.enter().append('text')
+            .attr("dx", 0)
+            .attr("dy", 0)
+            .text(function(d) { return d.relation;})
+.append('textPath')
+            .attr('xlink:href', function (d, i) {return '#' +"r" + d.source.id + "to" + d.target.id})
+            .style("text-anchor", "middle")
+            .style("pointer-events", "none")
+            .attr("startOffset", "50%")
+            .text(function (d) {return d.relation});
+ 
+theEdgeLables
+.attr("x", function(d) { return ((d.source.x + d.target.x)/2);})
+.attr("y", function(d) { return ((d.source.y + d.target.y)/2);});
+////
+      
+	 theLinks.exit().remove();  //?
+}
+
+function updateNodes() {
+	var u = gNode.selectAll(".node");
+	u.attr("transform", function(d) { 
+	return "translate(" + d.x + "," + d.y + ")"; 
+	});
+}
+
+
+
+function ticked() {
+	  updateLinks();
+	  updateNodes();
+}
+
+}
+  </script>
+</body>
+</html>
