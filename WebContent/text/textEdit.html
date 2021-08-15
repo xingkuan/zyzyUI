@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
+
+<script src="stgSrc.js"></script>
+
+<script>
+var srcId, srcSeq;
+var preSeq, nextSeq;
+
+
+function populateSrcIDs(srcIdsElem){   //#srcId
+	var srcId, i=0;
+	//populate options
+	populateField("http://localhost:8080/zyzySvc/STG/getSTGSrcs",   
+		function(e){
+			let name=e["name"];
+			let sId=e["id"];
+			let opt=`<option value="${sId}" >${name}</option>`;
+			if (i==0){
+				opt=`<option value="${sId}" select="selected">${name}</option>`;
+				srcId=sId;
+			}
+	    	$(srcIdsElem)            //$('#srcId')
+	        .append(opt);
+			i++;
+	});  
+	//hookup change handler
+	$(srcIdsElem).on('change', function(){
+		let [srcId, srcName] = getSelectedOf($(srcIdsElem));
+	    //alert(sel);
+		initForSrc(srcId);
+	});
+	//also load the first page of the selected source
+	initForSrc(srcId);
+}
+
+function getSelectedOf(elem){
+	return [$(elem).find(":selected").val(), $(elem).find(":selected").text()];
+}
+
+function initForSrc(sId){
+	//get the seq of the first of this source
+	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq=0");
+	srcSeq=temp.nextseq;
+	srcId=sId;
+	loadPage(srcId, srcSeq);
+}	
+	
+function loadPage(sId, sSeq){
+    let ver=0;
+    srcUrl="http://localhost:8080/zyzySvc/STG/getStgContentByID/"+sId+"/"+sSeq+"/"+ver;
+    //setTextFields(srcUrl, function(){
+    populateField(srcUrl, function(e){
+		//meta=JSON.stringify(jsonData[0]["meta"]);
+		meta=e["meta"];
+	
+		let imgURL=null;
+		if(meta)
+			imgURL=meta.match("imgs:\\[\(.*?\)\\]");  //extract imgs from meta field
+													//also exclude [ and ]	
+		if (imgURL!=null){
+			imgURL=imgURL[1].split(',')[0].trim()
+			imgURL='http://localhost/img/'+imgURL;
+		}
+				
+		//$('#srcMeta').text(JSON.stringify(jsonData[0]["meta"]));
+		$('#srcMeta').text(e["meta"]);
+		$('#srcProp').text(e["properties"]);
+		$("#srcImg").empty();
+		if(imgURL!=null)
+			$("#srcImg").html('<img src="'+imgURL+'" alt="">');
+		$('#srcName').text(e["name"]);
+		content = e["content"]
+		$('#srcContent').val(content);
+		$("#seqNum").text(srcSeq);
+	}, 
+	null);
+		
+	setupNavigator(sId, sSeq);		
+}
+
+function setupNavigator(sId, sSeq){
+	let temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
+	preSeq=temp["prevseq"];
+	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
+	nextSeq=temp["nextseq"];
+	if( preSeq){  
+		$("#btnPrev").show();
+	}else{  //disable it
+    	//$('#prev').style.display = "none";
+		$("#btnPrev").hide();
+    }
+	    
+    if(nextSeq){
+		$("#btnNext").show();
+		//document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
+	}else {//disable it
+		$("#btnNext").hide();
+	}
+}
+
+	//Helper function to serialize all the form fields into a JSON string
+	function composeData() {
+		/*    return JSON.stringify({
+		 "cat": $('input[name="cat"]:checked').val(),
+		 "data": $('#txtNote').val()
+		 })
+		 */
+		//alert($('#selRelation option:selected').val());
+		var strRslt, rsltObj;
+		rsltObj = {
+			src: {
+				srcID:	srcId,
+				seq:  srcSeq,
+				//name:	$('#srcName').val(),
+				name:	$('#srcName').text(),
+				meta:	$('#srcMeta').val(),
+				properties:	$('#srcProp').val(),
+				//note: 	$('#srcNote').html()
+				//note: 	editor.root.innerHTML,
+				//content: srcText.root.innerHTML,
+				srcContent: $('#srcContent').val()
+			}	
+		};
+		
+		//alert(typeof rsltObj );
+		let json= JSON.stringify(rsltObj)
+
+		//return strRslt;
+		return json;
+	}
+/*	
+	function IsNoteValid(str) {
+		try {
+		  //var json = JSON.parse("{"+str+"}");
+		  var json = JSON.parse(str);
+		  return (typeof json === 'object');
+		} catch (e) {
+   			alert("invalude format: \n"+str);
+		  return false;
+		}
+	}
+*/	
+	
+	var sel;
+</script>
+
+<style>
+</style>
+
+</head>
+
+<!-- body onload="initPage()" -->
+<body onload='populateSrcIDs($("#srcId"))'>
+<select id="srcId">
+</select>
+
+<div id="btns">
+	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
+	<div id="seqNum" style="float: left;"></div>
+	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
+	<br>
+</div>		
+<br>
+
+<div id="srcRowName" class="row" >
+	<div id="srcName" name="srcName" contenteditable="true">
+</div>
+	
+<div id="srcRowMeta" class="row">
+    <textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
+    <textarea id="srcProp" name="srcProp" cols=40 rows=5 ></textarea>
+    <div  id="srcImg"></div>
+</div>
+			
+<div id="srcRowNote" class="row">
+	<textarea id="srcContent" name="srcContent" cols=80 rows=20 ></textarea>
+</div>			
+
+<div id="rowAct" class="row">
+	<button onclick="saveStgSrc(true, composeData)">replace</button> <button onclick="saveStgSrc(false, composeData)">create</button> 
+</div>		
+
+</body>
+</html>

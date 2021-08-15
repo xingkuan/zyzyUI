@@ -2,6 +2,31 @@
  * 
  */
 
+
+
+function populateField(url, fn){
+	//url='http://localhost:8080/zyzySvc/JL/getJLs';
+	//alert("srcSetup: " + emID + ", " + val);
+    $.ajax({
+        type: "GET",
+        url: url,
+		async: false,
+        data: "",
+        success: function(data) {
+        	//console.log(data);
+        	if(data != null){
+    		//json=JSON.parse(data);
+    		//json.forEach(function(val){
+    		data.forEach(e => fn(e));
+        }
+        },
+		error : function(jqXHR, textStatus, errorThrown) {
+			alert('error: ' + fn + " " + textStatus + errorThrown);
+		}
+    });
+} 
+
+
 function setupOptionField(elementID, srcUrl, srcDataFldName) {
 	$.ajax({
 		type: "GET",
@@ -28,7 +53,7 @@ function setupOptionField(elementID, srcUrl, srcDataFldName) {
 		}
 	});
 }
-
+/*
 //function setNoteD(sec, val){
 function setTextFields(srcUrl, innerFn, innderFnX) {
 	//let srcUrl="/zyzySvc/reader/note/get/"+val;
@@ -53,7 +78,7 @@ function setTextFields(srcUrl, innerFn, innderFnX) {
 		}
 	});
 }
-
+*/
 function saveStgSrc(replacing, composeDataFn) {
 	//rem alert('to create... \nsrc: ' + $('#srcNote').val() + '\n...tgt: ' +  $('#tgtNote').val() + "\n...relation:" + $('#selRelation option:selected').val());
 	//rem console.log('add a note');

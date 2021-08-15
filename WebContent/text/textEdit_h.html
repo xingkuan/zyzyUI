@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+
+<script src="../jquery/jquery-3.3.1.min.js"></script>
+<script src="../elasticsearch-js/elasticsearch.js"></script>
+<script src="../d3JS/d3.js"></script>
+
+<script src="../quill/quill.min.js" ></script>
+<link href="../quill/quill.snow.css" rel="stylesheet">
+<script src="../quill/quill.js" ></script>
+
+<link rel="stylesheet" href="../textassist/styles.css" media="screen">
+<link rel="stylesheet" href="../textassist/textassist.css" media="screen">
+<script src="../textassist/textassist.min.js"></script>
+
+<!--  script src="author.js"></script  -->
+<script src="stgSrc.js"></script>
+<style>
+	#editor-container {
+	  height: 375px;
+	}
+	
+	.ql-snow span.ql-picker.ql-box {
+	    width: 18px;
+	}
+	
+	.ql-button {
+	    text-align: center;
+	    text-decoration: none;
+	    font-size: 12px;
+	}
+  	.sec-title1 {
+	    font-weight: bold;
+	    font-size: 20px;
+	}
+  	.sec-title2 {
+	    font-weight: bold;
+	    font-size: 16px;
+	}
+  	.sec-title3 {
+	    font-weight: bold;
+	    font-size: 14px;
+	}
+  	.sec-text {
+	    font-weight: normal;
+	}
+	
+	.noteSec {
+		padding-left: 5 px;
+	    font-weight: bold;
+		font-size: 12px;
+		color: red;
+	}
+
+	select {
+		padding:2px;
+		margin-top:2px;
+		line-height:1;
+		border-radius:2px;
+		outline:none
+	}
+	option {
+		padding:2px;
+		margin-top:2px;
+		line-height:0;
+		border-radius:2px;
+		outline:none
+	}
+	
+	div.oTitle { 
+		font-weight: bold;
+		font-size: 30px;
+		height: 30px;
+		width: 100px;
+	}
+	
+	.row:after {
+	  content: "";
+	  display: table;
+	  clear: both;
+	}
+	.column-1, .column-2 {
+	  float: left;
+	  position: relative;
+	}
+	.column-1 {
+	  width: 50px;
+	  margin-top:10px;
+	}
+	.column-2 {
+		width: 80%;
+		margin-top: 10px;
+	}
+	
+	.editMeta {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 50px;
+	  width: 100%;
+	}
+	
+	.editorContainer {
+	  border: 1px solid #ccc;
+	  box-sizing: border-box;
+	  display: inline-block;
+	  float: left;
+	  height: 400px;
+	  width: 100%;
+	}
+</style>
+<script>
+var srcId, srcSeq;
+var preSeq, nextSeq;
+
+function populateSrcIDs(srcIdsElem){   //#srcId
+	var srcId, i=0;
+	//populate options
+	populateField("http://localhost:8080/zyzySvc/STG/getSTGSrcs",   
+		function(e){
+			let name=e["name"];
+			let sId=e["id"];
+			let opt=`<option value="${sId}" >${name}</option>`;
+			if (i==0){
+				opt=`<option value="${sId}" select="selected">${name}</option>`;
+				srcId=sId;
+			}
+	    	$(srcIdsElem)            //$('#srcId')
+	        .append(opt);
+			i++;
+	});  
+	//hookup change handler
+	$(srcIdsElem).on('change', function(){
+		let [srcId, srcName] = getSelectedOf($(srcIdsElem));
+	    //alert(sel);
+		initForSrc(srcId);
+	});
+	//also load the first page of the selected source
+	initForSrc(srcId);
+}
+
+function getSelectedOf(elem){
+	return [$(elem).find(":selected").val(), $(elem).find(":selected").text()];
+}
+
+function initForSrc(sId){
+	//var urlParams = new URLSearchParams(window.location.search);
+	//const   keys = urlParams.keys(),
+	//    	values = urlParams.values(),
+	//    	entries = urlParams.entries();
+	//console.log(entries[0]);
+	//srcId=urlParams.get('sid');
+	//srcSeq=urlParams.get('sseq');
+
+	//get the seq of the first of this source
+	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq=0");
+	srcSeq=temp.nextseq;
+	srcId=sId;
+	loadPage(srcId, srcSeq);
+}
+/*
+function initPage(){
+	var urlParams = new URLSearchParams(window.location.search);
+	const   keys = urlParams.keys(),
+	    	values = urlParams.values(),
+	    	entries = urlParams.entries();
+		console.log(entries[0]);
+		srcId=urlParams.get('sid');
+		srcSeq=urlParams.get('sseq');
+	
+		loadPage(srcId, srcSeq);
+	}
+*/
+function loadPage(sId, sSeq){
+	let ver=0;
+	srcUrl="http://localhost:8080/zyzySvc/STG/getStgContentByID/"+sId+"/"+sSeq+"/"+ver;
+
+	regExs=[];
+	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSTGRegHTML/"+sId);
+	temp = temp['regex_html'];
+	if(temp)
+		regExs = temp.split("\n");
+
+	//** functions load up page contents ***
+	populateField(srcUrl, function(e){
+		nname=e["name"];
+		note=e["content"];
+		console.log(regExs);
+		////
+		for (const reStr of regExs) {
+			console.log(reStr);
+			//var patt, repStr;  // /\n/<br> ==> \n, <br>
+			[, patt, newStr] = reStr.split('/');
+			//console.log(patt, newStr);
+			re = new RegExp(patt, 'g');    //'\n', 'g';
+			note = note.replaceAll(re, newStr); //(re, '<br>')
+			//console.log(note);
+		}
+		////
+		meta=JSON.stringify(e["meta"]);
+		imgURL=null;
+		temp=meta.match("imgs:\\[(.*?)\\]");
+		if (temp!=null){
+			temp=temp[1].split(',')[0].trim()
+			imgURL='http://localhost/img/'+temp;
+		}
+				
+		meta = meta.replace(/{|}|"/g, ''); 
+		meta = meta.replace(/,/g, ",\n"); 
+		//console.log(meta);
+				
+		//template=jsonData[0]["template"];   
+		$('#srcName').val(nname);
+		$("#srcMeta").text(meta);
+		if(imgURL!=null)
+			$("#srcImg").html('<img src="'+imgURL+'" alt="">');
+		$("#seqNum").text(srcSeq); 
+		srcText.clipboard.dangerouslyPasteHTML(note, "api");
+		//setSelectedIndex(document.getElementById("srcTempList"),template);
+		    
+	    $("#TempList").show();
+//       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
+	});
+				
+	setupNavigator(sId, sSeq);		
+}
+	
+
+
+function setupNavigator(sId, sSeq){
+	let temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
+	preSeq=temp["prevseq"];
+	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
+	nextSeq=temp["nextseq"];
+	if( preSeq){  
+		$("#btnPrev").show();
+	}else{  //disable it
+    	//$('#prev').style.display = "none";
+		$("#btnPrev").hide();
+    }
+	    
+    if(nextSeq){
+		$("#btnNext").show();
+		//document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
+	}else {//disable it
+		$("#btnNext").hide();
+	}
+}
+
+//Helper function to serialize all the form fields into a JSON string
+function composeData() {
+	var strRslt, rsltObj;
+	meta=$('#srcMeta').text();
+	meta = meta.replace(/\n/g, ''); 
+	meta = meta.replace(/^/, '{"'); 
+	meta = meta.replace(/$/, '"}'); 
+	meta = meta.replace(/:/g, '":"'); 
+	meta = meta.replace(/,/g, '","'); 
+		
+	rsltObj = {
+		src: {
+			srcID:	srcId,
+			seq:  srcSeq,
+			name:	$('#srcName').val(),
+			meta:	meta,   //$('#srcMeta').text(),
+			//note: 	$('#srcNote').html()
+			//note: 	editor.root.innerHTML,
+			srcContent: srcText.root.innerHTML,
+		}	
+	};
+			
+	//alert(typeof rsltObj );
+	let json= JSON.stringify(rsltObj)
+	
+	//return strRslt;
+	return json;
+}
+	
+//	var sel;
+</script>
+
+</head>
+
+<!-- body onload="initPage()" -->
+<body onload='populateSrcIDs($("#srcId"))'>
+
+<select id="srcId">
+</select>
+
+<div id="btns">
+	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
+	<div id="seqNum" style="float: left;"></div>
+	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
+	<br>
+</div>		
+<br>
+
+<form id="noteFrm" enctype='text/plain' action="#"
+	onsubmit="saveStgSrc(composeData);return false">
+	
+	<div id="srcRowName" class="row" >    <!-- row 1 -->
+		<div class="column-1">Name:</div> 
+		<div class="column-2">
+			<input type="text" size="40em" style="float:left; margin-left:0px" id="srcName" name="srcName" >
+			<!--*** 2021.08.14 I see not value now! <div style="float:left">ver#: </div>
+			<div style="float:left"> 
+			   <select id="nodeverList" name="nodeVerList"  
+			  	   onchange='loadData($("#seqNum").val(), this.options[this.selectedIndex].text, true)'>
+				</select>
+			</div>  **** -->
+		</div>
+	</div>
+	
+	<div id="srcRowMeta" class="row">    <!-- row 2 -->   
+		<div class="column-1">Meta:</div> 
+		<div class="column-2">
+			<!-- div id="srcMeta" class="editMeta" contenteditable="true"  -->
+	    	<textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
+	    	<div  id="srcImg"></div> 
+		</div>  
+	</div>
+			
+	<div id="srcRowNote" class="row">    <!-- row 3 -->
+		<div class="column-1">Notes:</div>
+		<div class="column-2">
+			<div id="srcToolbar">
+				<span class="ql-formats">
+					<select class="ql-size">     <!-- size -->
+						<option value="10px">Small</option>
+						<option selected>Normal</option>
+						<option value="18px">Large</option>
+						<option value="32px">Huge</option>
+					</select>
+					<select class="ql-color">   <!-- color -->
+						<option selected></option>
+						<option value="red"></option>
+						<option value="orange"></option>
+						<option value="yellow"></option>
+						<option value="green"></option>
+						<option value="blue"></option>
+						<option value="purple"></option>
+					</select>
+					<button class="ql-button" value="title1">H1</button>   <!-- the format will be class "sec-title" -->
+					<button class="ql-button" value="title2">H2</button>   <!-- the format will be class "sec-title" -->
+					<button class="ql-button" value="title3">H3</button>   <!-- the format will be class "sec-title" -->
+					<button class="ql-button" value="text">T</button>    <!-- the format will be class "sec-text" -->
+					<!-- alignments -->
+					<button class="ql-align" value=""></button>
+					<button class="ql-align" value="center"></button>
+					<button class="ql-align" value="right"></button>
+					<button class="ql-align" value="justify"></button>
+				  
+					<button class="cust-clear" title="Clear Formatting">X</button>
+					<button class="ql-button" value="link" onclick="toCreateRelated()">R</button>
+				</span>
+			</div>
+		<div id="srcNote" class="editorContainer"></div>
+		<!--  button onclick="logHtmlContent(src)">Log content as HTML</button  -->
+		</div>
+	</div>			
+	
+	<div id="rowAct" class="row">   <!-- row 4 -->
+		<div class="column-1">
+		</div>
+		<div class="column-2">
+			<input type="submit" value="save Note">
+		</div>
+	</div>		
+</form>
+</body>
+
+<script>
+var BackgroundClass = Quill.import('attributors/class/background');
+var ColorClass = Quill.import('attributors/class/color');
+var SizeStyle = Quill.import('attributors/style/size');
+Quill.register(BackgroundClass, true);
+Quill.register(ColorClass, true);
+Quill.register(SizeStyle, true);
+
+const Parchment = Quill.import('parchment')
+var boxAttributor = new Parchment.Attributor.Class('button', 'sec', {
+	scope: Parchment.Scope.INLINE,
+	whitelist: ['text', 'title1','title2','title3', 'link'],
+});
+
+Quill.register(boxAttributor);
+
+var srcText = new Quill('#srcNote', {
+	modules: {
+	  toolbar: {
+		container: '#srcToolbar'
+	  }
+	},
+	placeholder: 'Compose an epic...',
+	  theme: 'snow'  // or 'bubble', or 'snow'
+});
+
+srcText.on('selection-change', function(range, oldRange, source) {
+	if (range) {
+		if (range.length == 0) {
+			sel="";
+			//  console.log('User cursor is on', range.index);
+		} else {
+			var text = srcText.getText(range.index, range.length);
+			sel=text;
+			//  console.log('User has highlighted', text);
+			//let's popup a custom menu, by clicking on a button in the bar?
+		}
+	  } else {
+	  //  console.log('Cursor not in the editor');
+	}
+	});
+
+$("button").click(function(event){
+	event.preventDefault();
+	});
+  
+function logHtmlContent(el) {
+	console.log(el.root.innerHTML);
+}
+
+$('.cust-clear').click(function(ev) {
+	//2020.09.04: maybe a bug; but found this work around when debug into the code..
+	//var range = srcText.getSelection();
+	var range = srcText.selection.savedRange;
+	srcText.removeFormat(range.index, range.length);
+	});
+</script>
+
+</html>
