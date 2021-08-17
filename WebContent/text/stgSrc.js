@@ -95,7 +95,7 @@ function saveStgSrc(replacing, composeDataFn) {
 		//dataType: "json",
 		dataType : "text",
 		//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
-		data : composeDataFn(),
+		data : composeDataFn,
 		success : function(data, textStatus, jqXHR) {
 			//$('#srcContent').val('note created successfully');
 			//alert('note created successfully');

@@ -269,7 +269,8 @@ function composeData() {
 			meta:	meta,   //$('#srcMeta').text(),
 			//note: 	$('#srcNote').html()
 			//note: 	editor.root.innerHTML,
-			srcContent: srcText.root.innerHTML,
+			//srcContent: srcText.root.innerHTML,    //content
+			srcContent: srcText.getContents()        //Quill delta format 
 		}	
 	};
 			
@@ -300,7 +301,7 @@ function composeData() {
 <br>
 
 <form id="noteFrm" enctype='text/plain' action="#"
-	onsubmit="saveStgSrc(composeData);return false">
+	onsubmit="saveStgSrc(false, composeData);return false">
 	
 	<div id="srcRowName" class="row" >    <!-- row 1 -->
 		<div class="column-1">Name:</div> 
@@ -414,6 +415,12 @@ srcText.on('selection-change', function(range, oldRange, source) {
 	  //  console.log('Cursor not in the editor');
 	}
 	});
+
+srcText.on('text-change', function(delta){
+let contents=srcText.getContents();
+//alert(JSON.stringify(contents, null, 2));
+//alert(JSON.stringify(delta, null, 2));
+});
 
 $("button").click(function(event){
 	event.preventDefault();

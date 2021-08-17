@@ -699,7 +699,7 @@ function getSubGroupOfJL(jlName, sub){
 	return subGrp;
 }
 function createPointsOfJL(lName, ptrGrp, colr){
-	let pGrp = getSubGroupOfJL(lName, 'P_');
+	var pGrp = getSubGroupOfJL(lName, 'P_');
 	ptrGrp.forEach((lst, i)=>{
 		createPtsOfSubLine(lst, pGrp, i);
 		});
@@ -707,13 +707,13 @@ function createPointsOfJL(lName, ptrGrp, colr){
 	lst.forEach((p,j)=>{
 		if(i>0 && j==0){  //subLine's first point is always shared '
 			//find that point, 
-			let p=pGrp.findObjectByName(xwName);
-			p.jlSubLine=p.jlSubLine+","+i;
+			let tmp=pGrp.getObjectByName(p[0]);
+			tmp.jlSubLine=tmp.jlSubLine+","+i;
 		}else{
 			let [xwName, seq, co, isXW]=p;
 			//let pt=create3DPoint(xwName +" "+seq, co, {color: 0xff0000});
 			//let pt=create3DPoint(xwName, co, {color: new THREE.Color(color.r, color.g, color.b)});
-			let pt=create3DPoint(xwName +" "+seq, co, colr);
+			let pt=create3DPoint(xwName, co, colr);
 			pt.jlSubLine=i;
 			pt.jlPtrSeq=seq;
 			if(!isEditor && pt.name.startsWith('x'))
@@ -944,6 +944,7 @@ function updateLabels() {
 	$('#labels').empty();
 	// and then add back with the new coordinations 
 	let isLblOverlap=false;
+	//TODO 2021.08.16: need further optiomization!
 	ptsGroups.children.forEach((child, ndx) => {   //each JingLuo
 		child.children.forEach(CofJL=>{
 			if(CofJL.name.startsWith('P_')){
@@ -1041,7 +1042,8 @@ pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
 					const elem = document.createElement('div');
 					elem.id = name+"_"+seq;
 					const tt = isEditor?name+"_"+seq:name;
-					elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + name + '\');">' + tt + '</a>';
+//TODO:2021.08.16 take 42ms
+ 					elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + name + '\');">' + tt + '</a>';
 			        elem.style.display = '';
 			        // move the elem to that position
 			        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
