@@ -16,10 +16,51 @@
 <script src="stgSrc.js"></script>
 <style>
 </style>
+</head>
+ 
+<!-- body onload="initPage()" -->
+<body onload='populateSrcIDs($("#srcId"))'>
+
+<select id="srcId">
+</select>
+
+<div id="btns">
+	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
+	<input type="number" id="seqNum" style="float: left;" "></div>
+	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
+	<br>
+</div>		
+<br>
+	
+<div id="srcRowName"> 
+Name: <span id="srcName"></span>
+</div>
+	
+<div id="srcRowMeta" style="margin-top: 1em;">    <!-- row 2 -->   
+Meta: <div id="srcMeta"></div>
+</div>
+			
+<div id="srcRowNote"  style="margin-top: 1em;">    <!-- row 3 -->
+	<div id="srcNote" ></div>
+</div>
+	
+</body>
 <script>
 var srcId, srcSeq;
 var preSeq, nextSeq;
 
+//$("#seqNum").on('change paste keyup click blur', function() {
+$("#seqNum").on('change', function() {
+     let tempSeq=$(this).val();
+     initForSrc(srcId, tempSeq-1);
+  })
+/*
+$("#seqNum").keypress(function (e) {
+  if (e.which == 13) {
+	  alert(tempSeq, srcSeq);
+  }
+});
+*/
 function populateSrcIDs(srcIdsElem){   //#srcId
 	var srcId, i=0;
 	//populate options
@@ -40,7 +81,7 @@ function populateSrcIDs(srcIdsElem){   //#srcId
 	$(srcIdsElem).on('change', function(){
 		let [srcId, srcName] = getSelectedOf($(srcIdsElem));
 	    //alert(sel);
-		initForSrc(srcId);
+		initForSrc(srcId, 0);
 	});
 	//also load the first page of the selected source
 	initForSrc(srcId);
@@ -50,7 +91,7 @@ function getSelectedOf(elem){
 	return [$(elem).find(":selected").val(), $(elem).find(":selected").text()];
 }
 
-function initForSrc(sId){
+function initForSrc(sId, sSeq=0){
 	//var urlParams = new URLSearchParams(window.location.search);
 	//const   keys = urlParams.keys(),
 	//    	values = urlParams.values(),
@@ -60,8 +101,14 @@ function initForSrc(sId){
 	//srcSeq=urlParams.get('sseq');
 
 	//get the seq of the first of this source
-	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq=0");
-	srcSeq=temp.nextseq;
+	let srcSeq;
+	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
+	if(temp && temp.nextseq){
+		srcSeq=temp.nextseq;
+	}else{	
+		temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
+		srcSeq=temp.prevseq;
+	}	
 	srcId=sId;
 	loadPage(srcId, srcSeq);
 }
@@ -72,7 +119,7 @@ function loadPage(sId, sSeq){
 		srcUrl="http://localhost:8080/zyzySvc/STG/getStgContentByID/"+sId+"/"+sSeq+"/"+ver;
 	
 		regExs=[];
-		temp = getRESTsingleRow(srcUrl);
+		temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSTGRegHTML/"+sId);
 		if(temp){
 			temp1 = temp['regex_html'];
 			if(temp1)
@@ -118,7 +165,7 @@ function loadPage(sId, sSeq){
 			}
 			$("#srcMeta").html(meta);
 			$("#srcNote").html(note);
-			$("#seqNum").text(sSeq); 
+			$("#seqNum").val(sSeq); 
 			
 	       	$("#TempList").show();
 //	       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
@@ -133,17 +180,21 @@ function setupNavigator(sId, sSeq){
 	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
 	nextSeq=temp["nextseq"];
 	if( preSeq){  
-		$("#btnPrev").show();
+		//$("#btnPrev").show();
+		$("#btnPrev").prop('disabled', false);
 	}else{  //disable it
     	//$('#prev').style.display = "none";
-		$("#btnPrev").hide();
+		//$("#btnPrev").hide();
+		$("#btnPrev").prop('disabled', true);
     }
 	    
     if(nextSeq){
-		$("#btnNext").show();
+		//$("#btnNext").show();
+		$("#btnNext").prop('disabled', false);
 		//document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
 	}else {//disable it
-		$("#btnNext").hide();
+		//$("#btnNext").hide();
+		$("#btnNext").prop('disabled', true);
 	}
 }
 
@@ -151,34 +202,5 @@ function setupNavigator(sId, sSeq){
 
 </script>
 
-</head>
- 
-<!-- body onload="initPage()" -->
-<body onload='populateSrcIDs($("#srcId"))'>
-
-<select id="srcId">
-</select>
-
-<div id="btns">
-	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
-	<div id="seqNum" style="float: left;"></div>
-	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
-	<br>
-</div>		
-<br>
-	
-<div id="srcRowName"> 
-Name: <span id="srcName"></span>
-</div>
-	
-<div id="srcRowMeta" style="margin-top: 1em;">    <!-- row 2 -->   
-Meta: <div id="srcMeta"></div>
-</div>
-			
-<div id="srcRowNote"  style="margin-top: 1em;">    <!-- row 3 -->
-	<div id="srcNote" ></div>
-</div>
-	
-</body>
 
 </html>

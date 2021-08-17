@@ -10,10 +10,53 @@
 
 <script src="stgSrc.js"></script>
 
+<style>
+</style>
+
+</head>
+
+<!-- body onload="initPage()" -->
+<body onload='populateSrcIDs($("#srcId"))'>
+<select id="srcId">
+</select>
+
+<div id="btns">
+	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
+	<input type="number" id="seqNum" style="float: left;"></div>
+	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
+	<br>
+</div>		
+<br>
+
+<div id="srcRowName" class="row" >
+	<div id="srcName" name="srcName" contenteditable="true">
+</div>
+	
+<div id="srcRowMeta" class="row">
+    <textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
+    <textarea id="srcProp" name="srcProp" cols=40 rows=5 ></textarea>
+    <div  id="srcImg"></div>
+</div>
+			
+<div id="srcRowNote" class="row">
+	<textarea id="srcContent" name="srcContent" cols=80 rows=20 ></textarea>
+</div>			
+
+<div id="rowAct" class="row">
+	<button onclick="saveStgSrc(true, composeData)">replace</button> <button onclick="saveStgSrc(false, composeData)">create</button> 
+</div>		
+
+</body>
+
+
 <script>
 var srcId, srcSeq;
 var preSeq, nextSeq;
 
+$("#seqNum").on('change', function() {
+     let tempSeq=$(this).val();
+     initForSrc(srcId, tempSeq-1);
+  })
 
 function populateSrcIDs(srcIdsElem){   //#srcId
 	var srcId, i=0;
@@ -38,17 +81,23 @@ function populateSrcIDs(srcIdsElem){   //#srcId
 		initForSrc(srcId);
 	});
 	//also load the first page of the selected source
-	initForSrc(srcId);
+	initForSrc(srcId,0);
 }
 
 function getSelectedOf(elem){
 	return [$(elem).find(":selected").val(), $(elem).find(":selected").text()];
 }
 
-function initForSrc(sId){
+function initForSrc(sId, sSeq=0){
 	//get the seq of the first of this source
-	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq=0");
-	srcSeq=temp.nextseq;
+	let srcSeq;
+	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
+	if(temp && temp.nextseq){
+		srcSeq=temp.nextseq;
+	}else{	
+		temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
+		srcSeq=temp.prevseq;
+	}	
 	srcId=sId;
 	loadPage(srcId, srcSeq);
 }	
@@ -79,7 +128,8 @@ function loadPage(sId, sSeq){
 		$('#srcName').text(e["name"]);
 		content = e["content"]
 		$('#srcContent').val(content);
-		$("#seqNum").text(srcSeq);
+		//$("#seqNum").text(srcSeq);
+		$("#seqNum").val(sSeq);
 	}, 
 	null);
 		
@@ -92,17 +142,21 @@ function setupNavigator(sId, sSeq){
 	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
 	nextSeq=temp["nextseq"];
 	if( preSeq){  
-		$("#btnPrev").show();
+		//$("#btnPrev").show();
+		$("#btnPrev").prop('disabled', false);
 	}else{  //disable it
     	//$('#prev').style.display = "none";
-		$("#btnPrev").hide();
+		//$("#btnPrev").hide();
+		$("#btnPrev").prop('disabled', true);
     }
 	    
     if(nextSeq){
-		$("#btnNext").show();
+		//$("#btnNext").show();
+		$("#btnNext").prop('disabled', false);
 		//document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
 	}else {//disable it
-		$("#btnNext").hide();
+		//$("#btnNext").hide();
+		$("#btnNext").prop('disabled', true);
 	}
 }
 
@@ -152,41 +206,4 @@ function setupNavigator(sId, sSeq){
 	var sel;
 </script>
 
-<style>
-</style>
-
-</head>
-
-<!-- body onload="initPage()" -->
-<body onload='populateSrcIDs($("#srcId"))'>
-<select id="srcId">
-</select>
-
-<div id="btns">
-	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
-	<div id="seqNum" style="float: left;"></div>
-	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
-	<br>
-</div>		
-<br>
-
-<div id="srcRowName" class="row" >
-	<div id="srcName" name="srcName" contenteditable="true">
-</div>
-	
-<div id="srcRowMeta" class="row">
-    <textarea id="srcMeta" name="srcMeta" cols=40 rows=5 ></textarea>
-    <textarea id="srcProp" name="srcProp" cols=40 rows=5 ></textarea>
-    <div  id="srcImg"></div>
-</div>
-			
-<div id="srcRowNote" class="row">
-	<textarea id="srcContent" name="srcContent" cols=80 rows=20 ></textarea>
-</div>			
-
-<div id="rowAct" class="row">
-	<button onclick="saveStgSrc(true, composeData)">replace</button> <button onclick="saveStgSrc(false, composeData)">create</button> 
-</div>		
-
-</body>
 </html>

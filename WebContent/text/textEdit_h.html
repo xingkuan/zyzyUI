@@ -113,176 +113,6 @@
 	  width: 100%;
 	}
 </style>
-<script>
-var srcId, srcSeq;
-var preSeq, nextSeq;
-
-function populateSrcIDs(srcIdsElem){   //#srcId
-	var srcId, i=0;
-	//populate options
-	populateField("http://localhost:8080/zyzySvc/STG/getSTGSrcs",   
-		function(e){
-			let name=e["name"];
-			let sId=e["id"];
-			let opt=`<option value="${sId}" >${name}</option>`;
-			if (i==0){
-				opt=`<option value="${sId}" select="selected">${name}</option>`;
-				srcId=sId;
-			}
-	    	$(srcIdsElem)            //$('#srcId')
-	        .append(opt);
-			i++;
-	});  
-	//hookup change handler
-	$(srcIdsElem).on('change', function(){
-		let [srcId, srcName] = getSelectedOf($(srcIdsElem));
-	    //alert(sel);
-		initForSrc(srcId);
-	});
-	//also load the first page of the selected source
-	initForSrc(srcId);
-}
-
-function getSelectedOf(elem){
-	return [$(elem).find(":selected").val(), $(elem).find(":selected").text()];
-}
-
-function initForSrc(sId){
-	//var urlParams = new URLSearchParams(window.location.search);
-	//const   keys = urlParams.keys(),
-	//    	values = urlParams.values(),
-	//    	entries = urlParams.entries();
-	//console.log(entries[0]);
-	//srcId=urlParams.get('sid');
-	//srcSeq=urlParams.get('sseq');
-
-	//get the seq of the first of this source
-	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq=0");
-	srcSeq=temp.nextseq;
-	srcId=sId;
-	loadPage(srcId, srcSeq);
-}
-/*
-function initPage(){
-	var urlParams = new URLSearchParams(window.location.search);
-	const   keys = urlParams.keys(),
-	    	values = urlParams.values(),
-	    	entries = urlParams.entries();
-		console.log(entries[0]);
-		srcId=urlParams.get('sid');
-		srcSeq=urlParams.get('sseq');
-	
-		loadPage(srcId, srcSeq);
-	}
-*/
-function loadPage(sId, sSeq){
-	let ver=0;
-	srcUrl="http://localhost:8080/zyzySvc/STG/getStgContentByID/"+sId+"/"+sSeq+"/"+ver;
-
-	regExs=[];
-	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSTGRegHTML/"+sId);
-	temp = temp['regex_html'];
-	if(temp)
-		regExs = temp.split("\n");
-
-	//** functions load up page contents ***
-	populateField(srcUrl, function(e){
-		nname=e["name"];
-		note=e["content"];
-		console.log(regExs);
-		////
-		for (const reStr of regExs) {
-			console.log(reStr);
-			//var patt, repStr;  // /\n/<br> ==> \n, <br>
-			[, patt, newStr] = reStr.split('/');
-			//console.log(patt, newStr);
-			re = new RegExp(patt, 'g');    //'\n', 'g';
-			note = note.replaceAll(re, newStr); //(re, '<br>')
-			//console.log(note);
-		}
-		////
-		meta=JSON.stringify(e["meta"]);
-		imgURL=null;
-		temp=meta.match("imgs:\\[(.*?)\\]");
-		if (temp!=null){
-			temp=temp[1].split(',')[0].trim()
-			imgURL='http://localhost/img/'+temp;
-		}
-				
-		meta = meta.replace(/{|}|"/g, ''); 
-		meta = meta.replace(/,/g, ",\n"); 
-		//console.log(meta);
-				
-		//template=jsonData[0]["template"];   
-		$('#srcName').val(nname);
-		$("#srcMeta").text(meta);
-		if(imgURL!=null)
-			$("#srcImg").html('<img src="'+imgURL+'" alt="">');
-		$("#seqNum").text(srcSeq); 
-		srcText.clipboard.dangerouslyPasteHTML(note, "api");
-		//setSelectedIndex(document.getElementById("srcTempList"),template);
-		    
-	    $("#TempList").show();
-//       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
-	});
-				
-	setupNavigator(sId, sSeq);		
-}
-	
-
-
-function setupNavigator(sId, sSeq){
-	let temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
-	preSeq=temp["prevseq"];
-	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
-	nextSeq=temp["nextseq"];
-	if( preSeq){  
-		$("#btnPrev").show();
-	}else{  //disable it
-    	//$('#prev').style.display = "none";
-		$("#btnPrev").hide();
-    }
-	    
-    if(nextSeq){
-		$("#btnNext").show();
-		//document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
-	}else {//disable it
-		$("#btnNext").hide();
-	}
-}
-
-//Helper function to serialize all the form fields into a JSON string
-function composeData() {
-	var strRslt, rsltObj;
-	meta=$('#srcMeta').text();
-	meta = meta.replace(/\n/g, ''); 
-	meta = meta.replace(/^/, '{"'); 
-	meta = meta.replace(/$/, '"}'); 
-	meta = meta.replace(/:/g, '":"'); 
-	meta = meta.replace(/,/g, '","'); 
-		
-	rsltObj = {
-		src: {
-			srcID:	srcId,
-			seq:  srcSeq,
-			name:	$('#srcName').val(),
-			meta:	meta,   //$('#srcMeta').text(),
-			//note: 	$('#srcNote').html()
-			//note: 	editor.root.innerHTML,
-			//srcContent: srcText.root.innerHTML,    //content
-			srcContent: srcText.getContents()        //Quill delta format 
-		}	
-	};
-			
-	//alert(typeof rsltObj );
-	let json= JSON.stringify(rsltObj)
-	
-	//return strRslt;
-	return json;
-}
-	
-//	var sel;
-</script>
 
 </head>
 
@@ -294,7 +124,7 @@ function composeData() {
 
 <div id="btns">
 	<button id="btnPrev" onclick="loadPage(srcId, preSeq)" class="nav" style="float: left;">Previous</button>
-	<div id="seqNum" style="float: left;"></div>
+	<input type="number" id="seqNum" style="float: left;"></div>
 	<button id="btnNext"  onclick="loadPage(srcId, nextSeq)" class="nav" style="float: left;">Next</button>
 	<br>
 </div>		
@@ -436,6 +266,194 @@ $('.cust-clear').click(function(ev) {
 	var range = srcText.selection.savedRange;
 	srcText.removeFormat(range.index, range.length);
 	});
-</script>
+	
+//---------------
 
+var srcId, srcSeq;
+var preSeq, nextSeq;
+
+$("#seqNum").on('change', function() {
+     let tempSeq=$(this).val();
+     initForSrc(srcId, tempSeq-1);
+  })
+
+function populateSrcIDs(srcIdsElem){   //#srcId
+	var srcId, i=0;
+	//populate options
+	populateField("http://localhost:8080/zyzySvc/STG/getSTGSrcs",   
+		function(e){
+			let name=e["name"];
+			let sId=e["id"];
+			let opt=`<option value="${sId}" >${name}</option>`;
+			if (i==0){
+				opt=`<option value="${sId}" select="selected">${name}</option>`;
+				srcId=sId;
+			}
+	    	$(srcIdsElem)            //$('#srcId')
+	        .append(opt);
+			i++;
+	});  
+	//hookup change handler
+	$(srcIdsElem).on('change', function(){
+		let [srcId, srcName] = getSelectedOf($(srcIdsElem));
+	    //alert(sel);
+		initForSrc(srcId);
+	});
+	//also load the first page of the selected source
+	initForSrc(srcId);
+}
+
+function getSelectedOf(elem){
+	return [$(elem).find(":selected").val(), $(elem).find(":selected").text()];
+}
+
+function initForSrc(sId, sSeq=0){
+	//var urlParams = new URLSearchParams(window.location.search);
+	//const   keys = urlParams.keys(),
+	//    	values = urlParams.values(),
+	//    	entries = urlParams.entries();
+	//console.log(entries[0]);
+	//srcId=urlParams.get('sid');
+	//srcSeq=urlParams.get('sseq');
+
+	//get the seq of the first of this source
+	let srcSeq;
+	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
+	if(temp && temp.nextseq){
+		srcSeq=temp.nextseq;
+	}else{	
+		temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
+		srcSeq=temp.prevseq;
+	}	
+	srcId=sId;
+	loadPage(srcId, srcSeq);
+}
+/*
+function initPage(){
+	var urlParams = new URLSearchParams(window.location.search);
+	const   keys = urlParams.keys(),
+	    	values = urlParams.values(),
+	    	entries = urlParams.entries();
+		console.log(entries[0]);
+		srcId=urlParams.get('sid');
+		srcSeq=urlParams.get('sseq');
+	
+		loadPage(srcId, srcSeq);
+	}
+*/
+function loadPage(sId, sSeq){
+	let ver=0;
+	srcUrl="http://localhost:8080/zyzySvc/STG/getStgContentByID/"+sId+"/"+sSeq+"/"+ver;
+
+	regExs=[];
+	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSTGRegHTML/"+sId);
+	temp = temp['regex_html'];
+	if(temp)
+		regExs = temp.split("\n");
+
+	//** functions load up page contents ***
+	populateField(srcUrl, function(e){
+		nname=e["name"];
+		note=e["content"];
+		console.log(regExs);
+		////
+		for (const reStr of regExs) {
+			console.log(reStr);
+			//var patt, repStr;  // /\n/<br> ==> \n, <br>
+			[, patt, newStr] = reStr.split('/');
+			//console.log(patt, newStr);
+			re = new RegExp(patt, 'g');    //'\n', 'g';
+			note = note.replaceAll(re, newStr); //(re, '<br>')
+			//console.log(note);
+		}
+		////
+		meta=JSON.stringify(e["meta"]);
+		imgURL=null;
+		temp=meta.match("imgs:\\[(.*?)\\]");
+		if (temp!=null){
+			temp=temp[1].split(',')[0].trim()
+			imgURL='http://localhost/img/'+temp;
+		}
+				
+		meta = meta.replace(/{|}|"/g, ''); 
+		meta = meta.replace(/,/g, ",\n"); 
+		//console.log(meta);
+				
+		//template=jsonData[0]["template"];   
+		$('#srcName').val(nname);
+		$("#srcMeta").text(meta);
+		if(imgURL!=null)
+			$("#srcImg").html('<img src="'+imgURL+'" alt="">');
+		$("#seqNum").val(sSeq); 
+		srcText.clipboard.dangerouslyPasteHTML(note, "api");
+		//setSelectedIndex(document.getElementById("srcTempList"),template);
+		    
+	    $("#TempList").show();
+//       	document.getElementById(sec+"Note").value = "<<< choose the corresponding template above >>>";
+	});
+				
+	setupNavigator(sId, sSeq);		
+}
+	
+
+
+function setupNavigator(sId, sSeq){
+	let temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
+	if(temp)
+		preSeq=temp["prevseq"];
+	temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
+	if(temp)
+		nextSeq=temp["nextseq"];
+	if( preSeq){  
+		//$("#btnPrev").show();
+		$("#btnPrev").prop('disabled', false);
+	}else{  //disable it
+    	//$('#prev').style.display = "none";
+		//$("#btnPrev").hide();
+		$("#btnPrev").prop('disabled', true);
+    }
+	    
+    if(nextSeq){
+		//$("#btnNext").show();
+		$("#btnNext").prop('disabled', false);
+		//document.getElementById("next").href = "?sid="+srcId+"&sseq="+nextSeq+"&ver=0";
+	}else {//disable it
+		//$("#btnNext").hide();
+		$("#btnNext").prop('disabled', true);
+	}
+}
+
+//Helper function to serialize all the form fields into a JSON string
+function composeData() {
+	var strRslt, rsltObj;
+	meta=$('#srcMeta').text();
+	meta = meta.replace(/\n/g, ''); 
+	meta = meta.replace(/^/, '{"'); 
+	meta = meta.replace(/$/, '"}'); 
+	meta = meta.replace(/:/g, '":"'); 
+	meta = meta.replace(/,/g, '","'); 
+		
+	rsltObj = {
+		src: {
+			srcID:	srcId,
+			seq:  srcSeq,
+			name:	$('#srcName').val(),
+			meta:	meta,   //$('#srcMeta').text(),
+			//note: 	$('#srcNote').html()
+			//note: 	editor.root.innerHTML,
+			//srcContent: srcText.root.innerHTML,    //content
+			srcContent: srcText.getContents()        //Quill delta format 
+		}	
+	};
+			
+	//alert(typeof rsltObj );
+	let json= JSON.stringify(rsltObj)
+	
+	//return strRslt;
+	return json;
+}
+	
+//	var sel;
+</script>
+	
 </html>
