@@ -23,6 +23,7 @@
 <form id=f1>
   <p>
   <span id="ptrX"></span>,<span id="ptrY"></span><span id="ptrZ"></span><br>
+  <span id="fcnX"></span>,<span id="fcnY"></span><span id="fcnZ"></span><br>
   Line: <span id="uiLine"></span> 
   <br>
   Point: <input list="dataPtrList" id="uiPoint" name="uiPoint" />
@@ -44,7 +45,7 @@
 		<div id="modelSel"  style="postition:relative;background:black; color:white">
 			Model: <select id = "selectModel">
 				<option value="" disabled selected>Select model</option>
-				<option value = "as_fem2.glb:asian_female_teen">asian female</option>
+				<option value = "as_fem2.glb:asian_female_teen:1">asian female</option>
 				<option value = "NOT:YET">asian male</option>
 			</select><br>
 			<div id="editorSel"   style="postition:relative;background:black; color:white">
@@ -92,15 +93,15 @@ loadGLTF, render, createPointsOfJL, createLinesOfJL,
 $("#selectModel").on('change', function(){
 	let msg=$(this).find(":selected").text();
 	let val=$(this).find(":selected").val();
-	let [fname, mname]=val.split(':');
+	let [fname, mname, mId]=val.split(':');
 	//alert(val);
-	initWorkspace(fname, mname);
+	initWorkspace(fname, mname, mId);
 
 //	$(".chkJLname").show();
 	$("#editorSel").show();
 });
 
-var modelName, jlNum;
+var modelName, modelId, jlNum;
 $("#saveModifiedPts").hide();
 
 //Firstly, let's size container properly: 
@@ -220,7 +221,7 @@ function loadJL(jlName){
 		
 		//if column "coor" contains value, then create the 3D point and add to the scene.
 		if (e['coor'] != null){
-			temp.push([e["name"], e["seq"], e['coor'], e['isxw'] ]);
+			temp.push([e["name"], e["seq"], e['coor'], e['facing'], e['isxw'] ]);
 		}
 	});
 	if(temp.length>0)
@@ -232,7 +233,7 @@ function loadJL(jlName){
 	}
 }
 
-function initWorkspace(fname, mname){
+function initWorkspace(fname, mname, mId){
 	if(fname=='NOT'){
 		alert("not a real file!");
 //		$(".chkJLname").attr("disabled", true);
@@ -241,6 +242,7 @@ function initWorkspace(fname, mname){
 	}
 	
 	modelName=mname;
+	modelId=mId;
 initJLlist('#jlCheckBox', 0);
 	initPointLabels('#labels', true);
 	init3D('#c', 30);
@@ -302,6 +304,9 @@ $( "#editDialog" ).dialog({
 //popup form field event hanlers
 $("#uiPoint").blur(function(){
 	//alert($(this).val());
+	if(!$(this).val())
+		return;
+
 	//XW data will be from INFOSTG; but "seq" and "coor" will be from JL.
 	populateField("http://localhost:8080/zyzySvc/XW/getPointByName/"+modelName+"/"+$("#jlName").text() +"/"+$(this).val(), 
 		e=>{
@@ -325,16 +330,25 @@ function composeData() {
 	//alert($('#selRelation option:selected').val());
 	let stgInfoID= jlNum*1000+parseInt($('#uiSeq').val());  //construct it as lineID*1000+seq  
 	stgInfoID=stgInfoID.toString();       // for whatever reason, the API was coded to take in string ...
+	let uiId=modelId+stgInfoID;  
+	uiId=Number(uiId);
 	var strRslt, rsltObj;
 	rsltObj = {
+		id: uiId,
 		model_name: modelName,
 		line_name:	$("#jlName").text(),  //$('#uiLine').text(),
 		name:	$('#uiPoint').val(),
 		uiSeq: $('#uiSeq').val(),
 		subNum: $('#subNum').val(),
-		x:	$('#ptrX').text(),
-		y:	$('#ptrY').text(),
-		z:	$('#ptrZ').text(),
+		//x:	$('#ptrX').text(),
+		//y:	$('#ptrY').text(),
+		//z:	$('#ptrZ').text(),
+		coor: {"x":parseFloat($('#ptrX').text()),
+				"y":parseFloat($('#ptrY').text()), 
+				"z":parseFloat($('#ptrZ').text())},
+		facing: {"x":parseFloat($('#fcnX').text()),
+				"y":parseFloat($('#fcnY').text()), 
+				"z":parseFloat($('#fcnZ').text())},
 		src: {srcID: "3", name:	$('#uiPoint').val(),   //used in call REST API to save to INFOSTG 
 			srcContent: $('#txtContent').val(), 
 			seq: stgInfoID, meta: $('#txtMeta').val()

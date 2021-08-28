@@ -39,7 +39,8 @@ ptsGroups.name='ptr Groups';
 jlObjs.add(ptsGroups);
 
 
-//try use 2D HTML div for labeling (instead of Sprite) 
+//try use 2D HTML div for labeling (instead of Sprite)
+//2021.08.25 But the performance is really bad when multiple Jinglups are loaded. 
 function initPointLabels(elemID, isE){
 	//const labelContainer = document.querySelector('#labels');
 	labelContainer = document.querySelector(elemID);
@@ -499,7 +500,8 @@ function addPointOnClick( e ) {
 		let child = intersects[0];
 		//add a temp point to the scene, and make it visible; 
 		//But its name are to be supplied/and saved later.
-		addTempPtr(child.point); 
+		//2021.08.26: also add the normal at that point, for deciding if this point is visible 
+		addTempPtr(child.point, child.face.normal); 
 
 		$("#uiLine").text($("#jlName").text());  
 		$("#container").attr('disabled','disabled');
@@ -507,11 +509,15 @@ function addPointOnClick( e ) {
 		$("#ptrY").text(child.point.y);
 		$("#ptrZ").text(child.point.z);
 
+		$("#fcnX").text(child.face.normal.x);
+		$("#fcnY").text(child.face.normal.y);
+		$("#fcnZ").text(child.face.normal.z);
+
 		$("#uiPoint").val("");
 		$("#editDialog").dialog( "open" );
 	}
 }	
-function addTempPtr(co){
+function addTempPtr(co, facing){
 	let grpName="tempPtrGrp";
 	if(ptsGroups.getObjectByName(grpName) == null){  
 		ptsGroups[grpName] = new THREE.Group();
@@ -521,13 +527,13 @@ function addTempPtr(co){
 	
 	let tmpPtrGrp=ptsGroups.getObjectByName(grpName);
 	tmpPtrGrp.clear();
-	let pt=create3DPoint("tempPtr", co, {color: 0xff0000});
+	let pt=create3DPoint("tempPtr", co, facing, {color: 0xff0000});
 	tmpPtrGrp.add(pt);
 
 	render();
 }
 
-function create3DPoint(name, co, ptColor){
+function create3DPoint(name, co, facing, ptColor){
 	let ptSph;
 	// the point spot
 	let ptGeo = new THREE.SphereGeometry( 0.04, 4, 4 );
@@ -536,8 +542,67 @@ function create3DPoint(name, co, ptColor){
 	ptSph.position.set(co['x'], co['y'], co['z']);
 	// ...
 	ptSph.name = name; 
+	ptSph.facing=facing;
 	//scene.add( ptSph );   // to be displayed as 3D obj
+//2021.08.25: DEVL, use Sprite as label
+//faster, but can't make it good enough.
+//	createLabel(ptSph);  
 	return ptSph;
+}
+//////////////////////// 2021.08.25 
+//   https://threejsfundamentals.org/threejs/lessons/threejs-billboards.html
+function createLabel(pt) {
+  const name=pt.name, labelWidth=40, size=10;
+  const canvas = makeLabelCanvas(labelWidth, size, name);
+  const texture = new THREE.CanvasTexture(canvas);
+  // because our canvas is likely not a power of 2
+  // in both dimensions set the filtering appropriately.
+  texture.minFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+	opacity: 0.8,
+// color:0xff00ff,//设置精灵矩形区域颜色
+//  rotation:Math.PI/4,//旋转精灵对象45度，弧度值
+
+  });
+  const label = new THREE.Sprite(spriteMaterial);
+  //label.position.set(pt.position.x, pt.position.y, pt.position.z);  That is: take the parent coordinate
+  label.scale.set(0.3, 0.3, 1); //// 只需要设置x、y两个分量就可以. image width?
+  pt.add(label);
+
+  function makeLabelCanvas(baseWidth, size, name){
+    const borderSize = 1;
+    const ctx = document.createElement('canvas').getContext('2d');
+    const font =  `${size}px bold sans-serif`;
+    ctx.font = font;
+    // measure how long the name will be
+    const textWidth = ctx.measureText(name).width;
+    const doubleBorderSize = borderSize * 2;
+    const width = baseWidth + doubleBorderSize;
+    const height = size + doubleBorderSize;
+    ctx.canvas.width = width;
+    ctx.canvas.height = height;
+
+    // need to set font again after resizing canvas
+    ctx.font = font;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(0, 0, width, height);
+
+    // scale to fit but don't stretch
+    const scaleFactor = Math.min(1, baseWidth / textWidth);
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(scaleFactor, 1);
+    ctx.fillStyle = 'white';  
+    ctx.fillText(name, 0, 0);
+
+    return ctx.canvas;
+  }
 }
 
 function render() {
@@ -545,6 +610,8 @@ function render() {
 	camera.updateProjectionMatrix();
 
     renderer.render(scene, camera);
+	//2021.08.25 DEVL: try to use Sprite as label for better performance
+	//but too ugly
 	updateLabels();
 }
 
@@ -710,10 +777,10 @@ function createPointsOfJL(lName, ptrGrp, colr){
 			let tmp=pGrp.getObjectByName(p[0]);
 			tmp.jlSubLine=tmp.jlSubLine+","+i;
 		}else{
-			let [xwName, seq, co, isXW]=p;
+			let [xwName, seq, co, facing, isXW]=p;
 			//let pt=create3DPoint(xwName +" "+seq, co, {color: 0xff0000});
 			//let pt=create3DPoint(xwName, co, {color: new THREE.Color(color.r, color.g, color.b)});
-			let pt=create3DPoint(xwName, co, colr);
+			let pt=create3DPoint(xwName, co, facing, colr);
 			pt.jlSubLine=i;
 			pt.jlPtrSeq=seq;
 			if(!isEditor && pt.name.startsWith('x'))
@@ -736,10 +803,12 @@ function createLinesOfJL(jlName, ptrGrp, color){
 	});
 	function createSubLine(name, n, subLinePtrs){
 		let points=[];
+		let tmp;
 		subLinePtrs.forEach((p,i)=>{
-			let [xwName, seq, co, isXW]=p;
+			let [xwName, seq, co, facing, isXW]=p;
 			//if(isXW)
-				points.push(new THREE.Vector3(co['x'], co['y'], co['z']));
+				tmp=new THREE.Vector3(co['x'], co['y'], co['z']);
+				points.push(tmp);
 		});
 		createCurve(points, new THREE.Vector3(0,0,0), name+n);
 	}
@@ -929,6 +998,8 @@ function clearAllJLs(){
 	ptsGroups.clear();
 }
 
+
+
 function updateLabels() {
 	var tempLabelPos=[];
 	var tempV = new THREE.Vector3();  
@@ -941,10 +1012,11 @@ function updateLabels() {
 	var rect = renderer.domElement.getBoundingClientRect();
  
 	 //remove all the labels
-	$('#labels').empty();
+	$('#labels').empty();    //TODO: should use labelContainer
 	// and then add back with the new coordinations 
 	let isLblOverlap=false;
-	//TODO 2021.08.16: need further optiomization!
+	//TODO 2021.08.16: need further optiomization: 
+	//Any way to eliminate invisible points without using raycaster?
 	ptsGroups.children.forEach((child, ndx) => {   //each JingLuo
 		child.children.forEach(CofJL=>{
 			if(CofJL.name.startsWith('P_')){
@@ -954,19 +1026,102 @@ function updateLabels() {
 					    c.name.startsWith('x')){
 						//do nothing.							
 					}else{
-						addPointToList(c, i);
+						//addPointToList(c, i);
+						//2021.08.26 DEVL instead of using raycaster, 
+						//   check tosee if the XueWei is facing away from us 
+						addPointToListViaFacing(c, i);
 					}
 				});
 			}
 		});
 	});
 	createAndAddLbls(pArr);
+	
+	//2021.08.26
+	//const tempV = new THREE.Vector3();
+	//const cameraToPoint = new THREE.Vector3();
+	//const cameraPosition = new THREE.Vector3();
+	//const normalMatrix = new THREE.Matrix3();
+	function addPointToListViaFacing(ch, i){
+		const minVisibleDot = 0.1;
+		// get a matrix that represents a relative orientation of the camera
+		//let cameraDir=camera.getWorldDirection();
+		//console.log(cameraDir);
+		//console.log(cameraDir.normalize());  //looks liket it is normalized.
+		
+		// get the camera's position
+		//let cameraPosition=camera.getWorldPosition();   //has warning 
+		let cameraPosition = new THREE.Vector3();     //not clean neither
+		camera.getWorldPosition(cameraPosition);
 
+		let cameraDir=new THREE.Vector3();
+		cameraDir.subVectors(cameraPosition, ch.position);
+		//console.log(cameraDir);
+		cameraDir=cameraDir.normalize();
+
+		//let ptrFacing=ch.getWorldDirection();   //has warning   
+		//let ptrFacing=new THREE.Vector3();    //??
+		//ch.getWorldDirection(ptrFacing); 
+		let ptrFacing=ch.facing;
+//2021.08.26 TODO: remove it
+if(ptrFacing){  //normal behave: 	    
+	    // get the dot product of camera relative direction to this position
+	    // on the globe with the direction from the camera to that point.
+	    // 1 = facing directly towards the camera
+	    // 0 = exactly on tangent of the sphere from the camera
+	    // < 0 = facing away
+	    const dot = cameraDir.dot(ptrFacing);
+		//console.log(dot);
+	 
+	    // if the orientation is not facing us hide it or outside view:
+	    if ( dot < minVisibleDot) {
+	      return;
+	    }else{
+		    ch.updateWorldMatrix(true, false);
+			ch.getWorldPosition(tempV);
+			//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
+			tempV.project(camera);  //get the normalized screen coordinatie of the pos
+		    if ( tempV.x <-1 || tempV.x > 1 ||
+				 tempV.y <-1 || tempV.y > 1 ){
+		      return;
+			}
+	 		//convert normalized screen coor t CSS coor
+			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
+			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
+			//console.log(ch.name, x, y);
+			//the range will be 0 to 2 ?
+			if(!pArr[x])
+				pArr[x]=[];	
+			const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+			const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
+			pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
+		}
+}else {//TODO: remove it. For now, just display it, because I need it to update data/
+		    ch.updateWorldMatrix(true, false);
+			ch.getWorldPosition(tempV);
+			//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
+			tempV.project(camera);  //get the normalized screen coordinatie of the pos
+		    if ( tempV.x <-1 || tempV.x > 1 ||
+				 tempV.y <-1 || tempV.y > 1 ){
+		      return;
+			}
+	 		//convert normalized screen coor t CSS coor
+			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
+			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
+			//console.log(ch.name, x, y);
+			//the range will be 0 to 2 ?
+			if(!pArr[x])
+				pArr[x]=[];	
+			const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+			const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
+			pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
+}
+	}
 	function addPointToList(ch, i){
 	    ch.updateWorldMatrix(true, false);
 		ch.getWorldPosition(tempV);
 		//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
-		tempV.project(camera);
+		tempV.project(camera);  //get the normalized screen coordinatie of the pos
 		
 		// determine if it is between camera and the body model.
 		let raycaster=getRaycaster();
@@ -982,7 +1137,7 @@ function updateLabels() {
 		  tempV.x >-1 && tempV.x < 1 &&
 		  tempV.y >-1 && tempV.y < 1 
 		){
-			//**********************DEVL*****
+			//convert normalized screen coor t CSS coor
 			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
 			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
 			//console.log(ch.name, x, y);
