@@ -1043,7 +1043,7 @@ function updateLabels() {
 	//const cameraPosition = new THREE.Vector3();
 	//const normalMatrix = new THREE.Matrix3();
 	function addPointToListViaFacing(ch, i){
-		const minVisibleDot = 0.1;
+		const minVisibleDot = 0.8;
 		// get a matrix that represents a relative orientation of the camera
 		//let cameraDir=camera.getWorldDirection();
 		//console.log(cameraDir);
