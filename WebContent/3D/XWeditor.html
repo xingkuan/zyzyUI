@@ -307,7 +307,7 @@ $("#uiPoint").blur(function(){
 	if(!$(this).val())
 		return;
 
-	//XW data will be from INFOSTG; but "seq" and "coor" will be from JL.
+	//XW data will be from INFOSTG; but "seq" and "coor" will be from UIDB.points.
 	populateField("http://localhost:8080/zyzySvc/XW/getPointByName/"+modelName+"/"+$("#jlName").text() +"/"+$(this).val(), 
 		e=>{
 			$("#uiSeq").val(e["seq"]);

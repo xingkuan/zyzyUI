@@ -23,7 +23,6 @@ var scene, camera, renderer, canvas, // raycaster,
 var isEditor=true;
 var updatedPoints={};
 
-
 // JL objects group. human model, Jingluo and Xuwei are added to this group.
 var jlObjs = new THREE.Object3D(); 
 jlObjs.name='jingluo Objs';
@@ -115,6 +114,7 @@ console.log("width:"+c.clientWidth);
 	 // orbitCtrl.maxAzimuthAngle = Math.PI * (100 / 180);
 	orbitCtrl.damping = 0.2;
 	  //2021.06.10 animate only upon change events
+
 	orbitCtrl.addEventListener( 'change', render );
 	  
 	orbitCtrl.update();
@@ -609,6 +609,10 @@ function render() {
 	camera.aspect = canvas.clientWidth / canvas.clientHeight;
 	camera.updateProjectionMatrix();
 
+//camDist = camera.position.distanceTo( orbitCtrl.target );
+//$("#curvLen").html("camers dist: "+ camDist);
+
+
     renderer.render(scene, camera);
 	//2021.08.25 DEVL: try to use Sprite as label for better performance
 	//but too ugly
@@ -1008,7 +1012,13 @@ function updateLabels() {
 	let lblNormSizeX=labelSize/canvas.clientWidth;
 	let lblNormSizeY=labelSize/canvas.clientHeight;
 
-	camera.updateMatrixWorld(true, false);  //? 
+	camera.updateMatrixWorld(true, false);  //?
+
+//2021.08.31: try to scale the size of point 	 
+let camDist = camera.position.distanceTo( orbitCtrl.target );
+let scaleOfPtr = camDist/10.;
+$("#curvLen").html("camers dist: "+ camDist);
+	
 	var rect = renderer.domElement.getBoundingClientRect();
  
 	 //remove all the labels
@@ -1022,6 +1032,7 @@ function updateLabels() {
 			if(CofJL.name.startsWith('P_')){
 				let pts = CofJL.children;
 				pts.forEach((c, i)=>{             //each point
+c.scale.set(scaleOfPtr,scaleOfPtr,scaleOfPtr);
 					if( !isEditor &&
 					    c.name.startsWith('x')){
 						//do nothing.							
@@ -1043,7 +1054,7 @@ function updateLabels() {
 	//const cameraPosition = new THREE.Vector3();
 	//const normalMatrix = new THREE.Matrix3();
 	function addPointToListViaFacing(ch, i){
-		const minVisibleDot = 0.8;
+		const minVisibleDot = 0.5;
 		// get a matrix that represents a relative orientation of the camera
 		//let cameraDir=camera.getWorldDirection();
 		//console.log(cameraDir);
@@ -1063,8 +1074,7 @@ function updateLabels() {
 		//let ptrFacing=new THREE.Vector3();    //??
 		//ch.getWorldDirection(ptrFacing); 
 		let ptrFacing=ch.facing;
-//2021.08.26 TODO: remove it
-if(ptrFacing){  //normal behave: 	    
+
 	    // get the dot product of camera relative direction to this position
 	    // on the globe with the direction from the camera to that point.
 	    // 1 = facing directly towards the camera
@@ -1096,26 +1106,7 @@ if(ptrFacing){  //normal behave:
 			const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
 			pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
 		}
-}else {//TODO: remove it. For now, just display it, because I need it to update data/
-		    ch.updateWorldMatrix(true, false);
-			ch.getWorldPosition(tempV);
-			//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
-			tempV.project(camera);  //get the normalized screen coordinatie of the pos
-		    if ( tempV.x <-1 || tempV.x > 1 ||
-				 tempV.y <-1 || tempV.y > 1 ){
-		      return;
-			}
-	 		//convert normalized screen coor t CSS coor
-			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
-			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
-			//console.log(ch.name, x, y);
-			//the range will be 0 to 2 ?
-			if(!pArr[x])
-				pArr[x]=[];	
-			const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
-			const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
-			pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
-}
+
 	}
 	function addPointToList(ch, i){
 	    ch.updateWorldMatrix(true, false);
@@ -1197,8 +1188,8 @@ pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
 					const elem = document.createElement('div');
 					elem.id = name+"_"+seq;
 					const tt = isEditor?name+"_"+seq:name;
-//TODO:2021.08.16 take 42ms
- 					elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + name + '\');">' + tt + '</a>';
+
+ 					elem.innerHTML = '<a href="http://localhost/html/text/textEdit_h.html?sid=3&sname=' + tt + '" target="details">' + tt + '</a>';
 			        elem.style.display = '';
 			        // move the elem to that position
 			        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;

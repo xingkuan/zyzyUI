@@ -52,6 +52,7 @@ import {init3D, loadGLTF, render,
 	createPointsOfJL, createLinesOfJL, createParticleSysOfJL, 
 	clearAllJLs, clearJL, 
 	updateAllParticleSys, 
+	setupClickHandler,
 	initPointLabels, startAnimation, stopAnimation
 } from './3Dcommons.js';
 
@@ -177,12 +178,15 @@ function initWorkspace(fname, mname, mId){
 	modelId=mId;
 
 	initPointLabels('#labels', false);
-	init3D('#c', 30);
+	init3D('#c', 100);
 	//loadGLTF('as_fem2.glb', "asian_female_teen");
 	loadGLTF(fname, mname);
 
 	//$(".chkJLname").attr("disabled", false);
 	initJLlist('#jlCheckBox');
+
+	//2021.08.31: point camera at middle-mouse click
+	setupClickHandler('none'); 
 }
 
 

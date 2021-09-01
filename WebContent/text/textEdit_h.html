@@ -278,29 +278,52 @@ $("#seqNum").on('change', function() {
   })
 
 function populateSrcIDs(srcIdsElem){   //#srcId
-	var srcId, i=0;
+	var srcId, seq;
+	//2021.08.31: if got here with sid and name:
+	var urlParams = new URLSearchParams(window.location.search);
+	//const   keys = urlParams.keys(),
+	//   	values = urlParams.values(),
+	//    	entries = urlParams.entries();
+	//console.log(entries[0]);
+	srcId=urlParams.get('sid');
+	srcId=parseInt(srcId,10);
+	let srcName=urlParams.get('sname');
+	if (srcId && srcName){   //from link
+		seq=getStgDocId(srcId, srcName);
+	}
+	
+	if (!srcId) srcId=1;
+	if (!seq ) seq=0;   
+
+	//var i=0;
 	//populate options
 	populateField("http://localhost:8080/zyzySvc/STG/getSTGSrcs",   
 		function(e){
 			let name=e["name"];
 			let sId=e["id"];
 			let opt=`<option value="${sId}" >${name}</option>`;
-			if (i==0){
-				opt=`<option value="${sId}" select="selected">${name}</option>`;
+			if (srcId===sId){   //arbiturrily set to the first one.
+				opt=`<option value="${sId}" selected=true>${name}</option>`;
 				srcId=sId;
 			}
 	    	$(srcIdsElem)            //$('#srcId')
 	        .append(opt);
-			i++;
+			//i++;
 	});  
 	//hookup change handler
 	$(srcIdsElem).on('change', function(){
 		let [srcId, srcName] = getSelectedOf($(srcIdsElem));
 	    //alert(sel);
-		initForSrc(srcId);
+		initForSrc(srcId);   //load the first one of this src.
 	});
 	//also load the first page of the selected source
-	initForSrc(srcId);
+	if (seq==0) {
+		initForSrc(srcId, seq);
+	}else {
+		loadPage(srcId, seq);
+		setupNavigator(sId, sSeq);
+		srcId=srcId;
+	}
 }
 
 function getSelectedOf(elem){
@@ -308,14 +331,6 @@ function getSelectedOf(elem){
 }
 
 function initForSrc(sId, sSeq=0){
-	//var urlParams = new URLSearchParams(window.location.search);
-	//const   keys = urlParams.keys(),
-	//    	values = urlParams.values(),
-	//    	entries = urlParams.entries();
-	//console.log(entries[0]);
-	//srcId=urlParams.get('sid');
-	//srcSeq=urlParams.get('sseq');
-
 	//get the seq of the first of this source
 	let srcSeq;
 	let temp=getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqNext?sid="+sId+"&seq="+sSeq);
@@ -342,6 +357,7 @@ function initPage(){
 	}
 */
 function loadPage(sId, sSeq){
+srcId=sId;
 	let ver=0;
 	srcUrl="http://localhost:8080/zyzySvc/STG/getStgContentByID/"+sId+"/"+sSeq+"/"+ver;
 
@@ -395,7 +411,10 @@ function loadPage(sId, sSeq){
 	setupNavigator(sId, sSeq);		
 }
 	
-
+function getStgDocId(sId, sName){
+	let temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getDocId?sid="+sId+"&sname="+sName);
+	return temp["seq"];
+}
 
 function setupNavigator(sId, sSeq){
 	let temp = getRESTsingleRow("http://localhost:8080/zyzySvc/STG/getSeqPrev?sid="+sId+"&seq="+sSeq);
