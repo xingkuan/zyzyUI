@@ -202,12 +202,12 @@ function getRaycaster(){
 }
 
 function resetWorkEnv(){
-	canvas.removeEventListener('pointerdown', edNone);
-	canvas.removeEventListener('pointerdown', edNew);
+	canvas.removeEventListener('click', edNone);
+	canvas.removeEventListener('click', edNew);
 //	canvas.removeEventListener('pointerup', edSticky);
 //	canvas.removeEventListener('pointerup', edFree);
 //canvas.removeEventListener( 'pointerdown', onPointerDownS );
-canvas.removeEventListener( 'pointerdown', onPointerMove );
+canvas.removeEventListener( 'pointermove', onPointerMove );
 
 //canvas.removeEventListener( 'pointerdown', onPointerDownF );
 //canvas.removeEventListener( 'pointerdown', onPointerMoveF );
@@ -235,10 +235,10 @@ function setupClickHandler(mode){
 	
 	switch(mode){
 		case "none":
-			canvas.addEventListener('pointerdown', edNone);  // 'pointerup', 'click'
+			canvas.addEventListener('click', edNone);  // 'pointerup', 'click', pointerdown
 			break;
 		case "new":
-			canvas.addEventListener('pointerdown', edNew);  //pointerdown, or 'pointerup', 'click'
+			canvas.addEventListener('click', edNew);  //pointerdown, or 'pointerup', 'click'
 			break;
 		case "modifier":
 			/* The flow: 1. "mousedown" on a label, bind the XueWei to th transformController (not really necessart!)
@@ -248,6 +248,7 @@ function setupClickHandler(mode){
 			$("#labels").on('click', "*", this, selectXWViaLabel);   // 1.
 			canvas.addEventListener( 'pointermove', onPointerMove );   // 2.  ...
 //			canvas.addEventListener( 'pointerdown', onPointerDown );  //  3...pointerdown, click?
+			canvas.addEventListener('click', edNone);  // 'pointerup', 'click'
 			//canvas.addEventListener( 'pointerup', onPointerUpS );
 			//canvas.addEventListener( 'click', pointCameraOnClick );
 			window.addEventListener( 'keydown', keydownHandler ); 
@@ -263,6 +264,10 @@ function keydownHandler(e){
 	let ctl = getTransformControler();
 console.log(stickyMod);
 	switch ( e.keyCode ) {
+		case 27: // escape
+			ctl.detach();
+			render();
+			break;
 		case 81: // Q
 			ctl.setSpace( control.space === 'local' ? 'world' : 'local' );
 			break;
@@ -368,6 +373,7 @@ function selectXWViaLabel(e){
 	let obj= jlObjs.getObjectByName( xwName); 
 	let transformControl=getTransformControler();
 	transformControl.attach(obj); 
+	render();
 }
 
 
@@ -436,7 +442,7 @@ function updateAffectedLines(facing=null) {
 	//and show the save button
 	$("#saveModifiedPts").show();
 	//and updateLine('足厥阴肝经', '{r:100, g:100, b:100}');
-	updateLine(jlName, '{r:100, g:100, b:100}');   //2021.09.01: why hard coded color here?
+	updateLine(jlName, 0xFF0000);   //2021.09.01: why hard coded color here?
 }
 
 function mouseIntersectOn3DObj(objs, mouseEvent){   //[modelObj]
@@ -837,7 +843,8 @@ function updateLine(jlName, color){
 	//removeSubGroupOfJL('足厥阴肝经', 'L_');
 	//createLinesOfJL('足厥阴肝经', subGrp, {r:0,g:250,b:0});
 	removeSubGroupOfJL(jlName, 'L_');
-	createLinesOfJL(jlName, subGrp, {r:0,g:250,b:0});
+	//createLinesOfJL(jlName, subGrp, {r:0,g:250,b:0});
+	createLinesOfJL(jlName, subGrp, 0xFF0000);
 	
 	function getGrp(i){
 		let grp=subGrp[i];
@@ -1009,6 +1016,7 @@ function updateLabels() {
 	let visiblePtrs = getVisiblePointsByFacing(0.2);
 	if(isEditor){
 		visiblePtrs.forEach((ch, ix)=>{
+			ch.scale.set(scaleOfPtr,scaleOfPtr,scaleOfPtr);
 /*			ch.updateWorldMatrix(true, false);
 			ch.getWorldPosition(tempV);
 

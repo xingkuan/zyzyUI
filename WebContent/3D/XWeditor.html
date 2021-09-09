@@ -70,7 +70,7 @@
 	  			<div id="intersectObjs"></div>
 		  	</div>	
 		</div>
-	    <div id="labels"></div>
+	    <div id="labels" style="color:red"></div>
     </div>
 </div>
 
@@ -184,6 +184,7 @@ $('#saveModifiedPts').click( ()=>{
 		let coor=updatedPoints[k][0];
 		let facing=updatedPoints[k][1];
 		updatePoint3Dcoor(modelName, jl, name, coor, facing); 
+		$("#saveModifiedPts").hide();
 	}
 });
 
