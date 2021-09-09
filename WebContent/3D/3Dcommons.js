@@ -1006,7 +1006,7 @@ function updateLabels() {
 	let isLblOverlap=false;
 	//TODO 2021.08.16: need further optiomization: 
 	//Any way to eliminate invisible points without using raycaster?
-	let visiblePtrs = getVisiblePointsByFacing(0.5);
+	let visiblePtrs = getVisiblePointsByFacing(0.2);
 	if(isEditor){
 		visiblePtrs.forEach((ch, ix)=>{
 /*			ch.updateWorldMatrix(true, false);
@@ -1035,6 +1035,7 @@ function updateLabels() {
 				let co = get2DcoorInView(ch);
 				let x=Math.ceil(co.x/labelSize);
 				let y=Math.ceil(co.y/labelSize);
+			//console.log(x,y);
 				if(!pArr[x])
 					pArr[x]=[];	
 				pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top]; 
@@ -1106,8 +1107,9 @@ function getVisiblePointsByFacing(minVisibleDot){
 						ch.getWorldPosition(tempV);  //Projects this vector from world space 
 											//into the camera's normalized device coordinate (NDC) space
 						tempV.project(camera);  //get the normalized screen coordinatie of the pos
-		    			if ( tempV.x >= -1 || tempV.x <= 1 ||    // that is, in the view frame
-				 			tempV.y >= -1 || tempV.y <= 1 ){
+					//console.log(tempV);	
+		    			if ( tempV.x >= -1 && tempV.x <= 1 &&    // that is, in the view frame
+				 			tempV.y >= -1 && tempV.y <= 1 ){
 		      				visiblePtrs.push(ch);
 						}
 					}
