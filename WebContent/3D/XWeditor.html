@@ -51,10 +51,9 @@
 			<div id="editorSel"   style="postition:relative;background:black; color:white">
 			<span id="jlName"></span>
 			<!-- button id="hookupTransformCtrl">Hookup Transform Controller</button   -->
-			<input type="radio" id="edNone" name="edMode" class="edMode" value="none" checked><label for="edMode">none</label> 
-			<input type="radio" id="edNew" name="edMode" class="edMode" value="new"><label for="edMode">new</label> 
-			<input type="radio" id="edSMove" name="edMode" class="edMode" value="sticky modifier"><label for="edMode">mod s.</label> 
-			<input type="radio" id="edFMove" name="edMode" class="edMode" value="free modifier"><label for="edMode">mod f.</label>
+			<input type="radio" id="edNone" name="edMod" class="edMod" value="none" checked><label for="edMod">none</label> 
+			<input type="radio" id="edNew" name="edMod" class="edMod" value="new"><label for="edMod">new</label> 
+			<input type="radio" id="edMod" name="edMod" class="edMod" value="modifier"><label for="edMod">modify</label> 
 			<button type="button" id="saveModifiedPts" style="display:inline-block;">save</button>
 			</div> 
 		</div>
@@ -159,7 +158,7 @@ function initJLlist(divID, mode){
 }
 
 //hookup click hander for different editing mode
-$('.edMode').click(function(e){
+$('.edMod').click(function(e){
   var val = $(this).val();
 
   $("#jlName").text('');
@@ -182,8 +181,9 @@ $('#saveModifiedPts').click( ()=>{
 	for(var k in updatedPoints){
 		console.log(k, updatedPoints[k]);
 		let [jl, name]=k.split('_');
-		let coor=updatedPoints[k];
-		updatePoint3Dcoor(modelName, jl, name, coor); 
+		let coor=updatedPoints[k][0];
+		let facing=updatedPoints[k][1];
+		updatePoint3Dcoor(modelName, jl, name, coor, facing); 
 	}
 });
 

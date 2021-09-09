@@ -75,6 +75,10 @@ console.log("width:"+c.clientWidth);
   camera.position.set(0, 10, 20);
   camera.zoom = 0.5;
   //camera.updateProjectionMatrix();
+
+  //cameraOrtho = new THREE.OrthographicCamera( - 600 * aspect, 600 * aspect, 600, - 600, 0.01, 30000 );
+  //currentCamera = cameraPersp;
+				
   scene = new THREE.Scene();
   scene.background = new THREE.Color('black');
 
@@ -184,8 +188,8 @@ console.log("width:"+c.clientWidth);
 function getRaycaster(){
     let raycaster = new THREE.Raycaster();
 	//raycaster.setFromCamera(mouse,camera);
-	raycaster.linePrecision = 0.03;  //two big value can cause "lines" always in the raycaster intersection.
-	raycaster.params.Points.threshold = 0.03;
+	raycaster.linePrecision = 0.05;  //two big value can cause "lines" always in the raycaster intersection.
+	raycaster.params.Points.threshold = 0.05;
 	//the normalize mouse coord
 /*	let mouse = new THREE.Vector2();
 	let rect = renderer.domElement.getBoundingClientRect();
@@ -198,9 +202,22 @@ function getRaycaster(){
 }
 
 function resetWorkEnv(){
-	canvas.removeEventListener('pointerup', edNew);
-	canvas.removeEventListener('pointerup', edSticky);
-	canvas.removeEventListener('pointerup', edFree);
+	canvas.removeEventListener('pointerdown', edNone);
+	canvas.removeEventListener('pointerdown', edNew);
+//	canvas.removeEventListener('pointerup', edSticky);
+//	canvas.removeEventListener('pointerup', edFree);
+//canvas.removeEventListener( 'pointerdown', onPointerDownS );
+canvas.removeEventListener( 'pointerdown', onPointerMove );
+
+//canvas.removeEventListener( 'pointerdown', onPointerDownF );
+//canvas.removeEventListener( 'pointerdown', onPointerMoveF );
+
+window.removeEventListener( 'keydown', keydownHandler );
+window.removeEventListener( 'keyup', keyupHandler );
+	
+$("#labels").off('click', '*');			
+
+	
 	$("#saveModifiedPts").hide();
 	updatedPoints={};
 	
@@ -209,162 +226,180 @@ function resetWorkEnv(){
 	
 	clearAllJLs();
 }
-//function removeNewPointEditor(){
-//	canvas.removeEventListener('pointerup', edNew);
-//}
-//function setupNewPointEditor(){
+
 function setupClickHandler(mode){
 	//let xx=getEventListeners(canvas);
-	[edNone,edNew, edSticky, edFree].forEach(i=>{
+	[edNone,edNew].forEach(i=>{
 		canvas.removeEventListener('pointerup',i);	
 	});
 	
 	switch(mode){
 		case "none":
-			canvas.addEventListener('pointerup', edNone);
+			canvas.addEventListener('pointerdown', edNone);  // 'pointerup', 'click'
 			break;
 		case "new":
-			canvas.addEventListener('pointerup', edNew);
+			canvas.addEventListener('pointerdown', edNew);  //pointerdown, or 'pointerup', 'click'
 			break;
-		case "sticky modifier":
-			setupStickyModifierListener();
-			canvas.addEventListener('pointerup', edSticky);
-			break;
-		case "free modifier":
-			//setupTransformControler();
-			setupFreeModifierListener();
-			canvas.addEventListener('pointerup', edFree);
-			//alert("TODO: free ...");
+		case "modifier":
+			/* The flow: 1. "mousedown" on a label, bind the XueWei to th transformController (not really necessart!)
+			 * 			 2. redraw XW and line while moving.
+			 *			 3. add the XW to the updatedList
+			 */ 
+			$("#labels").on('click', "*", this, selectXWViaLabel);   // 1.
+			canvas.addEventListener( 'pointermove', onPointerMove );   // 2.  ...
+//			canvas.addEventListener( 'pointerdown', onPointerDown );  //  3...pointerdown, click?
+			//canvas.addEventListener( 'pointerup', onPointerUpS );
+			//canvas.addEventListener( 'click', pointCameraOnClick );
+			window.addEventListener( 'keydown', keydownHandler ); 
+			window.addEventListener( 'keyup', keyupHandler ); 
 			break;
 		default:
 			alert("invalid modifier")
   }
 }
-function edNone(e){     //""mouseup" events not working, because of the OrbitControls!
-	e.preventDefault();   
-	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
-	switch (e.which){
-		case 1: 
+
+var stickyMod=-1;
+function keydownHandler(e){
+	let ctl = getTransformControler();
+console.log(stickyMod);
+	switch ( e.keyCode ) {
+		case 81: // Q
+			ctl.setSpace( control.space === 'local' ? 'world' : 'local' );
 			break;
-		case 2:
-			pointCameraOnClick(e);
+		case 83: // S, entering "Sticky" mode
+		console.log("S");
+			stickyMod=1;
 			break;
-		case 3:
+		case 65: // A, entering "Free" mode
+		console.log("A");
+			stickyMod=0;
 			break;
-		default:
-			alert("a strange mouse event");
-		e.preventDefault();
+		case 16: // Shift
+			ctl.setTranslationSnap( 100 );
+			ctl.setRotationSnap( THREE.MathUtils.degToRad( 15 ) );
+			ctl.setScaleSnap( 0.25 );
+			break;
+		case 87: // W
+			ctl.setMode( 'translate' );
+			break;
+		case 69: // E
+			ctl.setMode( 'rotate' );
+			break;
+		case 82: // R
+			ctl.setMode( 'scale' );
+			break;
+//		case 67: // C
+//			const position = currentCamera.position.clone();
+//			currentCamera = currentCamera.isPerspectiveCamera ? cameraOrtho : cameraPersp;
+//			currentCamera.position.copy( position );
+//			orbit.object = currentCamera;
+//			ctl.camera = currentCamera;
+//			currentCamera.lookAt( orbit.target.x, orbit.target.y, orbit.target.z );
+//			onWindowResize();
+//			break;
+		case 86: // V
+			const randomFoV = Math.random() + 0.1;
+			const randomZoom = Math.random() + 0.1;
+			cameraPersp.fov = randomFoV * 160;
+			cameraOrtho.bottom = - randomFoV * 500;
+			cameraOrtho.top = randomFoV * 500;
+			cameraPersp.zoom = randomZoom * 5;
+			cameraOrtho.zoom = randomZoom * 5;
+			onWindowResize();
+			break;
+		case 187:
+		case 107: // +, =, num+
+			ctl.setSize( ctl.size + 0.1 );
+			break;
+		case 189:
+		case 109: // -, _, num-
+			ctl.setSize( Math.max( ctl.size - 0.1, 0.1 ) );
+			break;
+		case 88: // X
+			ctl.showX = ! ctl.showX;
+			break;
+		case 89: // Y
+			ctl.showY = ! ctl.showY;
+			break;
+		case 90: // Z
+			ctl.showZ = ! ctl.showZ;
+			break;
+		case 32: // Spacebar
+			ctl.enabled = ! ctl.enabled;
+			break;
+	}	
+}
+function keyupHandler(e){
+	let ctl = getTransformControler();
+	switch ( e.keyCode ) {
+		case 16: // Shift
+			ctl.setTranslationSnap( null );
+			ctl.setRotationSnap( null );
+			ctl.setScaleSnap( null );
+			break;
+		case 83: // S, exit "Sticky" mode
+		console.log("-S");
+			stickyMod=-1;
+			break;
+		case 65: // A, exit "Free" mode
+		console.log("-A");
+			stickyMod=-1;
+			break;
 	}
+}
+function edNone(e){
+	e.preventDefault();   
+	if(e.altKey)
+		pointCameraOnClick(e);
 }
 function edNew(e){     //""mouseup" events not working, because of the OrbitControls!
-	e.preventDefault();   
-	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
-	switch (e.which){
-		case 1: 
-			break;
-		case 2:
-			pointCameraOnClick(e);
-			break;
-		case 3:
-			addPointOnClick(e);
-			break;
-		default:
-			alert("a strange mouse event");
-		e.preventDefault();
-	}
+	e.preventDefault();
+	if(e.shiftKey)  //add XW
+		addPointOnClick(e);
+	else if(e.altKey){  //point camera
+		pointCameraOnClick(e);
+	}  //the rest: let OrbitControl move the camera	
 }
-function edSticky(e){     //""mouseup" events not working, because of the OrbitControls!
-	e.preventDefault();   
-	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
-	switch (e.which){
-		case 1: 
-			break;
-		case 2:
-			pointCameraOnClick(e);
-			break;
-		case 3:
-			//stickyModifier(e);
-			break;
-		default:
-			alert("a strange mouse event");
 
-	}
+function selectXWViaLabel(e){
+	//alert('clicked ' + e.currentTarget.id);
+	let [xwName, t] = e.currentTarget.id.split('_');	
+
+	let obj= jlObjs.getObjectByName( xwName); 
+	let transformControl=getTransformControler();
+	transformControl.attach(obj); 
 }
-function edFree(e){     //""mouseup" events not working, because of the OrbitControls!
-	e.preventDefault();   
-	//console.log("mouse event in "+id+ ": " + e.which + " or button " + e.button); 
-	switch (e.which){
-		case 1: 
-			break;
-		case 2:
-			pointCameraOnClick(e);
-			break;
-		case 3:
-			//setupFreeModifierListener(e);  //2021.08.09 not having this here feels something is missing
-			break;
-		default:
-			alert("a strange mouse event");
-		e.preventDefault();
-	}
-}
-function setupStickyModifierListener(e){
-	const onUpPosition = new THREE.Vector2();
-	const onDownPosition = new THREE.Vector2();
-				
-	canvas.addEventListener( 'pointerdown', onPointerDown );
-	canvas.addEventListener( 'pointerup', onPointerUp );
-	canvas.addEventListener( 'pointermove', onPointerMove );
-	
-	function onPointerDown( event ) {
-		onDownPosition.x = event.clientX;
-		onDownPosition.y = event.clientY;
-	}
-	
-	function onPointerUp() {
-		onUpPosition.x = event.clientX;
-		onUpPosition.y = event.clientY;
-	
-		let transformControl=getTransformControler();
-		if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) 
-			transformControl.detach();
-	}
-	
-	function onPointerMove( event ) {
-		let mouse=getNormalizedMousePos(event);	
-		let raycaster=getRaycaster();
-		raycaster.setFromCamera(mouse,camera);
-		//let jlPtrs = jlObjs.getObjectByName( activeJL );
-		let ptrs=[];
-		ptsGroups.children.forEach(jl=>{          //each JingLuo
-			jl.children.forEach(g =>{          //P, SL, PS ...
-				if(g.name.startsWith('P_'))
-					ptrs=ptrs.concat(g.children);
-			})
-		});
-		let intersects = raycaster.intersectObjects(ptrs, true);
-	
-		let transformControl=getTransformControler();
-	//console.log("onPointerMove(), points: " + ptsGroups.children);
-	//console.log("onPointerMove(), intersects: " + intersects.length);
-		if ( intersects.length > 0 ) {
-			const object = intersects[ 0 ].object;
-	
-			if ( object !== transformControl.object ) {
-				transformControl.attach( object );
+
+
+function onPointerMove( e ) {
+	e.preventDefault();
+	if(e.altlKey){  //point camera
+		pointCameraOnClick(e);
+//	}else if(e.shiftKey){  //move the 3D obj (via TransformContrl)
+	}else {		//modifying xw point
+		let transformControl =getTransformControler();
+		let obj = transformControl.object;
+		if(!obj)   //no object is selected;
+			return;
+
+		if(stickyMod==1){  //move the 3D obj (via TransformContrl)
+		console.log("sticky mod");	
+			let [pos, facing]=mouseIntersectOn3DObj([modelObj], e);
+			if(pos){
+				//updatePtr(obj, child.point, child.face.normal);
+				console.log("update display", pos, facing);
+				obj.position.set(pos.x, pos.y, pos.z);
+				obj.facing=facing;
+				updateAffectedLines(facing);
 			}
-		}
-		else{                    //202108.09:Not sure if it is needed.
-			transformControl.detach();
-		}
-		render();
+		}else if(stickyMod==0){ //handled by transformCtrl
+		console.log("free mod");
+		}  
 	}
+	render();
+	//orbitContrl alsp handles camara pan
 }
 
-//function removeTransformControler(){
-//	let obj=scene.getObjectByName("transformCtrl");
-//	if (obj)
-//		scene.remove(obj);
-//}
 function getTransformControler(){
 	//let canvas = renderer.domElement;
 	let obj=scene.getObjectByName("transformCtrl");
@@ -374,73 +409,22 @@ function getTransformControler(){
 		transformControl.setSize(0.5);
 		transformControl.addEventListener( 'change', render );
 		transformControl.addEventListener( 'dragging-changed', function ( event ) {
-			orbitCtrl.enabled = ! event.value;
+			orbitCtrl.enabled = ! event.value;       //so orbitCtrl and transformCtrl will not interfere
 		} );
 		transformControl.addEventListener( 'objectChange', function () {
-			updateLines();
+			updateAffectedLines();  //show we pass transformControl as a parameter? For "free modi", "facing" is irrelivent. so no need
+							// in trying to pass it to the funcition.
 		} );
 		scene.add( transformControl );
 	}
 	return obj;
 }
-function setupFreeModifierListener(e){
-//https://threejs.org/examples/webgl_geometry_spline_editor.html
-	const onUpPosition = new THREE.Vector2();
-	const onDownPosition = new THREE.Vector2();
-				
-	canvas.addEventListener( 'pointerdown', onPointerDown );
-	canvas.addEventListener( 'pointerup', onPointerUp );
-	canvas.addEventListener( 'pointermove', onPointerMove );
 	
-	function onPointerDown( event ) {
-		onDownPosition.x = event.clientX;
-		onDownPosition.y = event.clientY;
-	}
-	
-	function onPointerUp() {
-		onUpPosition.x = event.clientX;
-		onUpPosition.y = event.clientY;
-	
-		let transformControl=getTransformControler();
-	//console.log(transformControl.object.position);
-	//console.log(transformControl.pointEnd);
-		if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) 
-			transformControl.detach();
-	}
-	
-	function onPointerMove( event ) {
-		let mouse=getNormalizedMousePos(event);	
-		let raycaster=getRaycaster();
-		raycaster.setFromCamera(mouse,camera);
-		//let jlPtrs = jlObjs.getObjectByName( activeJL );
-		let ptrs=[];
-		ptsGroups.children.forEach(jl=>{          //each JingLuo
-			jl.children.forEach(g =>{          //P, SL, PS ...
-				if(g.name.startsWith('P_'))
-					ptrs=ptrs.concat(g.children);
-			})
-		});
-		let intersects = raycaster.intersectObjects(ptrs, true);
-	
-		let transformControl=getTransformControler();
-	//console.log("onPointerMove(), points: " + ptsGroups.children);
-	//console.log("onPointerMove(), intersects: " + intersects.length);
-		if ( intersects.length > 0 ) {
-			const object = intersects[ 0 ].object;
-	
-			if ( object !== transformControl.object ) {
-				transformControl.attach( object );
-			}
-		}
-		/*else{
-			transformControl.detach();
-		}*/
-		render();
-	}
-}
-
-function updateLines() {
+//when a point is modified, we update the display, and save it 
+// to an array of modifiedPoints
+function updateAffectedLines(facing=null) {
 	//2021.08.09:prototype
+	//2021.09.01, improving TODO: A point can be on multiple lines. Anything need to be done?
 	let ptr=scene.getObjectByName("transformCtrl").object;
 	let name=ptr.name;
 	//let jlLine = ptsGroups.getObjectByName('L_足厥阴肝经');	
@@ -448,74 +432,70 @@ function updateLines() {
 	let [t,jlName] = grp.name.split('_');	
 	
 	//add to updatedPoints
-	updatedPoints[jlName+'_'+name]=ptr.position;	
-	//show the save button
+	updatedPoints[jlName+'_'+name]=[ptr.position, facing]; 	
+	//and show the save button
 	$("#saveModifiedPts").show();
-	//updateLine('足厥阴肝经', '{r:100, g:100, b:100}');
-	updateLine(jlName, '{r:100, g:100, b:100}');
+	//and updateLine('足厥阴肝经', '{r:100, g:100, b:100}');
+	updateLine(jlName, '{r:100, g:100, b:100}');   //2021.09.01: why hard coded color here?
 }
 
-function pointCameraOnClick( e ) {
-	e.preventDefault();
-	let raycaster=getRaycaster();
-	let mouse = getNormalizedMousePos(e);
+function mouseIntersectOn3DObj(objs, mouseEvent){   //[modelObj]
+		let raycaster=getRaycaster();
 	
-	raycaster.setFromCamera(mouse,camera);
+		//let mouse = getNormalizedMousePos(e);
+		let mouse = new THREE.Vector2();
+		let rect = renderer.domElement.getBoundingClientRect();
+		mouse.x = ( ( mouseEvent.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
+		mouse.y = - ( ( mouseEvent.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
+		//return mouse;	
+		raycaster.setFromCamera(mouse,camera);
+	
+		let ptrPos, ptrFacing;
+		//prepareRaycaster(e);
+		//let intersects = raycaster.intersectObjects(jlObjs.children, true);
+		let intersects = raycaster.intersectObjects(objs, true);  //target only the model
+//		let intersects = raycaster.intersectObjects([modelObj], true);  //target only the model
+		//console.log("intersected " + intersects.length);
+		if(intersects.length > 0){ 
+			let child = intersects[0];   //point at the facing object		
+			//let rawName = child.object.name;
 
-	//prepareRaycaster(e);
-	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
-	let intersects = raycaster.intersectObjects([modelObj], true);  //target only the model
-	//console.log("intersected " + intersects.length);
-	if(intersects.length > 0){ 
-		let child = intersects[0];   //point at the facing object		
-		let rawName = child.object.name;
-		//console.log("... " + rawName +":("+child.point.x+","+child.point.y+","+child.point.z+")");
-		//camera.lookAt(new THREE.Vector3(child.point.x,child.point.y,child.point.z));
-		//camera.lookAt(new THREE.Vector3(10,10,10));
-		orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
+			ptrPos=child.point;
+			ptrFacing=child.face.normal;
+		}
+	return [ptrPos, ptrFacing];
+}
+function pointCameraOnClick( e ) {
+	let [pos, facing]=mouseIntersectOn3DObj([modelObj], e);
+	if(pos){
+		//orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
+		orbitCtrl.target.set(pos.x,pos.y,pos.x);
 		orbitCtrl.update();
-	}
+	}   	
 }
-function getNormalizedMousePos(e){
-	let mouse = new THREE.Vector2();
-	let rect = renderer.domElement.getBoundingClientRect();
-	mouse.x = ( ( e.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
-	mouse.y = - ( ( e.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-	return mouse;	
-}
+
 function addPointOnClick( e ) {
 	if($('#jlName').text()==''){
 		alert("Please select a JingLuo first.");
 		return;
 	}
 	e.preventDefault();
-	let raycaster=getRaycaster();
-	let mouse=getNormalizedMousePos(e);	
-	raycaster.setFromCamera(mouse,camera);
 
-	//prepareRaycaster(e);
-	//let intersects = raycaster.intersectObjects(jlObjs.children, true);
-	let intersects = raycaster.intersectObjects([modelObj], true);
-	if(intersects.length > 0){ 
-		let child = intersects[0];
-		//add a temp point to the scene, and make it visible; 
-		//But its name are to be supplied/and saved later.
-		//2021.08.26: also add the normal at that point, for deciding if this point is visible 
-		addTempPtr(child.point, child.face.normal); 
+	let [pos, facing]=mouseIntersectOn3DObj([modelObj], e);
+		addTempPtr(pos, facing); 
 
 		$("#uiLine").text($("#jlName").text());  
 		$("#container").attr('disabled','disabled');
-		$("#ptrX").text(child.point.x);
-		$("#ptrY").text(child.point.y);
-		$("#ptrZ").text(child.point.z);
+		$("#ptrX").text(pos.x);
+		$("#ptrY").text(pos.y);
+		$("#ptrZ").text(pos.z);
 
-		$("#fcnX").text(child.face.normal.x);
-		$("#fcnY").text(child.face.normal.y);
-		$("#fcnZ").text(child.face.normal.z);
+		$("#fcnX").text(facing.x);
+		$("#fcnY").text(facing.y);
+		$("#fcnZ").text(facing.z);
 
 		$("#uiPoint").val("");
 		$("#editDialog").dialog( "open" );
-	}
 }	
 function addTempPtr(co, facing){
 	let grpName="tempPtrGrp";
@@ -681,7 +661,6 @@ function loadGLTF(gltfName, modelName){
     //2021.06.10: becaue I disabled animation...
     render(e=>{d=new Date();return d.getTime();});
 }
-
 
 function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
     const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
@@ -1014,10 +993,10 @@ function updateLabels() {
 
 	camera.updateMatrixWorld(true, false);  //?
 
-//2021.08.31: try to scale the size of point 	 
-let camDist = camera.position.distanceTo( orbitCtrl.target );
-let scaleOfPtr = camDist/10.;
-$("#curvLen").html("camers dist: "+ camDist);
+	//2021.08.31: try to scale the size of point 	 
+	let camDist = camera.position.distanceTo( orbitCtrl.target );
+	let scaleOfPtr = camDist/10.;
+	$("#curvLen").html("camers dist: "+ camDist);
 	
 	var rect = renderer.domElement.getBoundingClientRect();
  
@@ -1027,74 +1006,12 @@ $("#curvLen").html("camers dist: "+ camDist);
 	let isLblOverlap=false;
 	//TODO 2021.08.16: need further optiomization: 
 	//Any way to eliminate invisible points without using raycaster?
-	ptsGroups.children.forEach((child, ndx) => {   //each JingLuo
-		child.children.forEach(CofJL=>{
-			if(CofJL.name.startsWith('P_')){
-				let pts = CofJL.children;
-				pts.forEach((c, i)=>{             //each point
-c.scale.set(scaleOfPtr,scaleOfPtr,scaleOfPtr);
-					if( !isEditor &&
-					    c.name.startsWith('x')){
-						//do nothing.							
-					}else{
-						//addPointToList(c, i);
-						//2021.08.26 DEVL instead of using raycaster, 
-						//   check tosee if the XueWei is facing away from us 
-						addPointToListViaFacing(c, i);
-					}
-				});
-			}
-		});
-	});
-	createAndAddLbls(pArr);
-	
-	//2021.08.26
-	//const tempV = new THREE.Vector3();
-	//const cameraToPoint = new THREE.Vector3();
-	//const cameraPosition = new THREE.Vector3();
-	//const normalMatrix = new THREE.Matrix3();
-	function addPointToListViaFacing(ch, i){
-		const minVisibleDot = 0.5;
-		// get a matrix that represents a relative orientation of the camera
-		//let cameraDir=camera.getWorldDirection();
-		//console.log(cameraDir);
-		//console.log(cameraDir.normalize());  //looks liket it is normalized.
-		
-		// get the camera's position
-		//let cameraPosition=camera.getWorldPosition();   //has warning 
-		let cameraPosition = new THREE.Vector3();     //not clean neither
-		camera.getWorldPosition(cameraPosition);
-
-		let cameraDir=new THREE.Vector3();
-		cameraDir.subVectors(cameraPosition, ch.position);
-		//console.log(cameraDir);
-		cameraDir=cameraDir.normalize();
-
-		//let ptrFacing=ch.getWorldDirection();   //has warning   
-		//let ptrFacing=new THREE.Vector3();    //??
-		//ch.getWorldDirection(ptrFacing); 
-		let ptrFacing=ch.facing;
-
-	    // get the dot product of camera relative direction to this position
-	    // on the globe with the direction from the camera to that point.
-	    // 1 = facing directly towards the camera
-	    // 0 = exactly on tangent of the sphere from the camera
-	    // < 0 = facing away
-	    const dot = cameraDir.dot(ptrFacing);
-		//console.log(dot);
-	 
-	    // if the orientation is not facing us hide it or outside view:
-	    if ( dot < minVisibleDot) {
-	      return;
-	    }else{
-		    ch.updateWorldMatrix(true, false);
+	let visiblePtrs = getVisiblePointsByFacing(0.5);
+	if(isEditor){
+		visiblePtrs.forEach((ch, ix)=>{
+/*			ch.updateWorldMatrix(true, false);
 			ch.getWorldPosition(tempV);
-			//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
-			tempV.project(camera);  //get the normalized screen coordinatie of the pos
-		    if ( tempV.x <-1 || tempV.x > 1 ||
-				 tempV.y <-1 || tempV.y > 1 ){
-		      return;
-			}
+
 	 		//convert normalized screen coor t CSS coor
 			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
 			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
@@ -1104,71 +1021,47 @@ c.scale.set(scaleOfPtr,scaleOfPtr,scaleOfPtr);
 				pArr[x]=[];	
 			const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
 			const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
-			pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
-		}
-
+			pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D]; */
+			let co = get2DcoorInView(ch);
+			let x=Math.ceil(co.x/labelSize);
+			let y=Math.ceil(co.y/labelSize);
+			if(!pArr[x])
+				pArr[x]=[];	
+			pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top]; 
+		});
+	}else{   //viewer
+		visiblePtrs.forEach((ch, ix)=>{
+			if(!ch.name.startsWith('x')){   //display only real point; not the assiting ones
+				let co = get2DcoorInView(ch);
+				let x=Math.ceil(co.x/labelSize);
+				let y=Math.ceil(co.y/labelSize);
+				if(!pArr[x])
+					pArr[x]=[];	
+				pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top]; 
+			}	
+		});
 	}
-	function addPointToList(ch, i){
-	    ch.updateWorldMatrix(true, false);
-		ch.getWorldPosition(tempV);
-		//Projects this vector from world space into the camera's normalized device coordinate (NDC) space
-		tempV.project(camera);  //get the normalized screen coordinatie of the pos
-		
-		// determine if it is between camera and the body model.
-		let raycaster=getRaycaster();
-		raycaster.setFromCamera(tempV, camera);
-		//let raycaster=prepareRaycaster(e);
-		//let raycaster=getRaycaster(e);
-	    //let modelObj = scene.getObjectByName("asian_female_teen", true);
-    	const intersectedObjects = raycaster.intersectObjects([ch, modelObj], true);
-    	// This object is visible only if it is the first.
-    	const show = intersectedObjects.length && ch === intersectedObjects[0].object;
 
-		if(show &&
-		  tempV.x >-1 && tempV.x < 1 &&
-		  tempV.y >-1 && tempV.y < 1 
-		){
-			//convert normalized screen coor t CSS coor
-			let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
-			let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
-			//console.log(ch.name, x, y);
-			//the range will be 0 to 2 ?
-if(!pArr[x])
-	pArr[x]=[];	
-const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
-const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;			
-pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
-			//**********************DEVL*****
-/*			//if this one overlaps existing one, 
-			for (const e of tempLabelPos){
-			  	//console.log(ch.name, Math.abs(e[0]-tempV.x), Math.abs(e[1]-tempV.y));
-				
-			   	isLblOverlap=false;
-			   	if((Math.abs(e[0]-tempV.x) < labelSize)&&(Math.abs(e[1]-tempV.y) < labelSize)){
-					//console.log("skip");
-					isLblOverlap=true;
-			   		break;
-			   	};
-			}
-			//create and show it only if not overlaped
-			if(!isLblOverlap){ 
-			   	tempLabelPos.push([tempV.x, tempV.y]);
-		        const x = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
-		        const y = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
-			    //console.log('coord:', x, y);
-				    
-				//create an HTML element for it 
+	createAndAddLbls(pArr);
+
+
+	function createAndAddLbls(arrOfPts){
+		arrOfPts.forEach(row=>{  //row
+			row.forEach(col=>{
+				let [name, seq, x, y]=col;
+				//console.log(name);
 				const elem = document.createElement('div');
-				elem.id = ch.name;
-				//elem.textContent = sText;
-				//elem.innerHTML = '<a href="javascript:getPointDetail("textDivP", "' + sText + '");">'+sText+'</a>';
-				elem.innerHTML = '<a href="javascript:getPointDetail(\'textDivP\', \'' + ch.name + '\');">' +ch.name + '</a>';
-	
+				elem.id = name+"_"+seq;
+				const tt = isEditor?name+"_"+seq:name;
+
+				if(isEditor){
+					elem.innerHTML = tt;
+				}else{
+					elem.innerHTML = '<a href="http://localhost/html/text/textEdit_h.html?sid=3&sname=' + tt + '" target="details">' + tt + '</a>';
+				}
 		        elem.style.display = '';
-		        // get the note coordinate
-				
 		        // move the elem to that position
-		        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+		        elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
 		        elem.style.transform = `translate(${x}px,${y}px)`;
 		        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
 					 
@@ -1176,34 +1069,75 @@ pArr[x][y]=[ ch.name, ch.jlPtrSeq, x2D, y2D];
 		        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
 				
 				labelContainer.appendChild(elem);
-			}
-*/
-		}	
-	}
-		function createAndAddLbls(arrOfPts){
-			arrOfPts.forEach(row=>{  //row
-				row.forEach(col=>{
-					let [name, seq, x, y]=col;
-					//console.log(name);
-					const elem = document.createElement('div');
-					elem.id = name+"_"+seq;
-					const tt = isEditor?name+"_"+seq:name;
-
- 					elem.innerHTML = '<a href="http://localhost/html/text/textEdit_h.html?sid=3&sname=' + tt + '" target="details">' + tt + '</a>';
-			        elem.style.display = '';
-			        // move the elem to that position
-			        //elem.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
-			        elem.style.transform = `translate(${x}px,${y}px)`;
-			        //elem.style.transform = `translate(1%, 1%) translate(${x}px,${y}px)`;
-						 
-			        // set the zIndex for sorting
-			        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
-					
-					labelContainer.appendChild(elem);
-				});
 			});
-		}
+		});
+	}
 }
+
+function getVisiblePointsByFacing(minVisibleDot){
+	var visiblePtrs=[];
+	//const minVisibleDot = 0.5;
+	var dot;
+	var tempV = new THREE.Vector3();     //not clean neither
+
+	var cameraPosition = new THREE.Vector3();     //not clean neither
+	camera.getWorldPosition(cameraPosition);
+	var cameraDir=new THREE.Vector3();
+
+	ptsGroups.children.forEach(jl=>{       //each JingLuo
+		jl.children.forEach(g =>{          //P, SL, PS ...
+			if(g.name.startsWith('P_')){    // ... the group of points
+				let pts = g.children;
+				pts.forEach((ch, i)=>{             //each point
+					cameraDir.subVectors(cameraPosition, ch.position);
+					//console.log(cameraDir);
+					cameraDir=cameraDir.normalize();
+
+					//let ptrFacing=ch.facing;
+				    // get the dot product of camera relative direction to this position
+				    // on the globe with the direction from the camera to that point.
+				    // 1 = facing directly towards the camera
+				    // 0 = exactly on tangent of the sphere from the camera
+				    // < 0 = facing away
+				    dot = cameraDir.dot(ch.facing);
+
+					if(dot > minVisibleDot){  // facing camera enough
+						ch.updateWorldMatrix(true, false);
+						ch.getWorldPosition(tempV);  //Projects this vector from world space 
+											//into the camera's normalized device coordinate (NDC) space
+						tempV.project(camera);  //get the normalized screen coordinatie of the pos
+		    			if ( tempV.x >= -1 || tempV.x <= 1 ||    // that is, in the view frame
+				 			tempV.y >= -1 || tempV.y <= 1 ){
+		      				visiblePtrs.push(ch);
+						}
+					}
+				});
+			}  
+		});
+	});
+
+	return visiblePtrs;
+}
+
+function get2DcoorInView(obj){
+	var tempV = new THREE.Vector3();
+	obj.updateWorldMatrix(true, false);
+	obj.getWorldPosition(tempV);
+	tempV.project(camera);  //get the normalized screen coordinatie of the pos
+
+//	//convert normalized screen coor t CSS coor
+//	let x=Math.ceil((1.0+tempV.x)/lblNormSizeX);
+//	let y=Math.ceil((1.0+tempV.y)/lblNormSizeY);
+	//console.log(ch.name, x, y);
+	//the range will be 0 to 2 ?
+//	const x2D = (tempV.x * .5 + .5) * canvas.clientWidth +rect.left;
+//	const y2D = (tempV.y * -.5 + .5) * canvas.clientHeight+rect.top;
+	let x2D = (tempV.x * .5 + .5) * canvas.clientWidth;
+	let y2D = (tempV.y * -.5 + .5) * canvas.clientHeight;
+
+	return new THREE.Vector2(x2D, y2D);
+}
+
 //2021.07.12--------------
 function removeStickModifier(){
 	console.log("TODO ...");
@@ -1230,6 +1164,23 @@ function resizeRendererToDisplaySize(renderer) {
     return needResize;
 }
 */
+
+function onWindowResize() {
+/*	const aspect = window.innerWidth / window.innerHeight;
+
+	cameraPersp.aspect = aspect;
+	cameraPersp.updateProjectionMatrix();
+
+	cameraOrtho.left = cameraOrtho.bottom * aspect;
+	cameraOrtho.right = cameraOrtho.top * aspect;
+	cameraOrtho.updateProjectionMatrix();
+
+	renderer.setSize( window.innerWidth, window.innerHeight );
+
+	render();
+*/
+}
+
 
 export {labelSize,
 updatedPoints,

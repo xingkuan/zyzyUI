@@ -49,13 +49,14 @@ function savePointUI(fn) {
 	})
 }
 
-function updatePoint3Dcoor(modelName, jl, name, coor){
+function updatePoint3Dcoor(modelName, jl, name, coor, facing){
 	let	url="http://localhost:8080/zyzySvc/XW/updateCoor";
 	
 	let obj={"model_name":modelName,
 				"line_name":jl,
 				"name":name,
-				"coor":coor
+				"coor":coor,
+				"facing":facing
 			};
 	let json= JSON.stringify(obj);
 	
