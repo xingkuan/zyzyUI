@@ -262,7 +262,7 @@ function setupClickHandler(mode){
 var stickyMod=-1;
 function keydownHandler(e){
 	let ctl = getTransformControler();
-console.log(stickyMod);
+//console.log(stickyMod);
 	switch ( e.keyCode ) {
 		case 27: // escape
 			ctl.detach();
@@ -272,7 +272,7 @@ console.log(stickyMod);
 			ctl.setSpace( control.space === 'local' ? 'world' : 'local' );
 			break;
 		case 83: // S, entering "Sticky" mode
-		console.log("S");
+//		console.log("S");
 			stickyMod=1;
 			break;
 		case 65: // A, entering "Free" mode
@@ -343,7 +343,7 @@ function keyupHandler(e){
 			ctl.setScaleSnap( null );
 			break;
 		case 83: // S, exit "Sticky" mode
-		console.log("-S");
+//		console.log("-S");
 			stickyMod=-1;
 			break;
 		case 65: // A, exit "Free" mode
@@ -442,7 +442,8 @@ function updateAffectedLines(facing=null) {
 	//and show the save button
 	$("#saveModifiedPts").show();
 	//and updateLine('足厥阴肝经', '{r:100, g:100, b:100}');
-	updateLine(jlName, 0xFF0000);   //2021.09.01: why hard coded color here?
+	//updateLine(jlName, 0xFF0000);   //2021.09.01: why hard coded color here?
+	updateLine(jlName);   //2021.09.11
 }
 
 function mouseIntersectOn3DObj(objs, mouseEvent){   //[modelObj]
@@ -739,11 +740,12 @@ function removeSubGroupOfJL(jlName, sub){
 	let subGrp = ptsGroups.getObjectByName(sub+jlName, true);
 	parent.remove(subGrp);
 }
-function getSubGroupOfJL(jlName, sub){
+function getSubGroupOfJL(jlName, sub, color=null){
 	var parent = ptsGroups.getObjectByName(jlName, true);
 	if(!parent){
 		parent = new THREE.Group();
 		parent.name=jlName;
+		parent.jlColor=color;  //2021.09.11: used in updateLine()
 		ptsGroups.add(parent);   //remember to add to ptsGroups, which is in scene
 	}
 	var subGrp = ptsGroups.getObjectByName(sub+jlName, true);
@@ -755,7 +757,7 @@ function getSubGroupOfJL(jlName, sub){
 	return subGrp;
 }
 function createPointsOfJL(lName, ptrGrp, colr){
-	var pGrp = getSubGroupOfJL(lName, 'P_');
+	var pGrp = getSubGroupOfJL(lName, 'P_', colr);
 	ptrGrp.forEach((lst, i)=>{
 		createPtsOfSubLine(lst, pGrp, i);
 		});
@@ -784,7 +786,7 @@ function createPointsOfJL(lName, ptrGrp, colr){
 function createLinesOfJL(jlName, ptrGrp, color){
 	//ptrLst:  [ [ptr1, ptr2, ..], [ptr4, ptr5, ...], ... ]
 	//console.log('show JL');
-	let grpL = getSubGroupOfJL(jlName, 'L_');
+	let grpL = getSubGroupOfJL(jlName, 'L_', color);
 	var colr=color;
 	
 	ptrGrp.forEach((p,i)=>{
@@ -827,9 +829,10 @@ function createLinesOfJL(jlName, ptrGrp, color){
 //2021.08.09:prototype of build JL Line from points in scene. The idea is that it can 
 //be updated automatically when the points is changed. No! that probably would not work!
 //function createLinesOfJLv2(jlName, color){
-function updateLine(jlName, color){
+function updateLine(jlName){
 	//get the points from memory
 	let pGrp = getSubGroupOfJL(jlName, 'P_');
+	let color=pGrp.parent.jlColor;
 	let subGrp = [];
 	pGrp.children.forEach(p=>{       //for each points
 		//based on p.jlSubLine, build a list of pts for each line:
@@ -844,7 +847,8 @@ function updateLine(jlName, color){
 	//createLinesOfJL('足厥阴肝经', subGrp, {r:0,g:250,b:0});
 	removeSubGroupOfJL(jlName, 'L_');
 	//createLinesOfJL(jlName, subGrp, {r:0,g:250,b:0});
-	createLinesOfJL(jlName, subGrp, 0xFF0000);
+	//createLinesOfJL(jlName, subGrp, 0xFF0000);  //TODO
+	createLinesOfJL(jlName, subGrp, color);  //TODO
 	
 	function getGrp(i){
 		let grp=subGrp[i];
@@ -859,7 +863,7 @@ function updateLine(jlName, color){
 function createParticleSysOfJL(jlName, pGrps, color, size){
 	let pathLen="length: "   ;  //for dev info only
 
-	let grpPS = getSubGroupOfJL(jlName, 'PS_');
+	let grpPS = getSubGroupOfJL(jlName, 'PS_', color);
 	var colr=color;
 
 	pGrps.forEach((p,i)=>{

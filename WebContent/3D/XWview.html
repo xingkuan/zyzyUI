@@ -111,9 +111,10 @@ function initJLlist(divID){
 		let seq=e["seq"];
 		let colr=e["meta"];
 		colr=colr.match("color:(.*?)((?=;)|$)");
-		colr=parseInt(colr[1].replace(/^#/, ''), 16);
+		colr=colr[1];
+		//colr=parseInt(colr[1].replace(/^#/, ''), 16);
     	$(divID)            //$('#jlCheckBox')
-        .append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}" data-color="${colr}">${name}`)
+        .append(`<label style="color:${colr}"><input type="checkbox" class="chkJLname" id="${name}" value="${seq}" data-color="${colr}"><span>${name}</span></label>`)
         .append(`<br>`);
 	});  
 //... and the click event handler
@@ -158,8 +159,6 @@ function loadJL(jlName, color){
 
 	//remove all XueWei and JL objects, and working on the currently selected:
 	if(ptrList.length>0){
-		//createPointsOfJL(jlName, ptrList, 0x0000ff);
-		//createParticleSysOfJL(jlName, ptrList, 0x0000ff, 3.0);
 		createPointsOfJL(jlName, ptrList, color);
 		createParticleSysOfJL(jlName, ptrList, color, 3.0);
 	}

@@ -122,14 +122,18 @@ function initJLlist(divID, mode){
 		function(e){
 			let name=e["name"];
 			let seq=e["seq"];
+		let colr=e["meta"];
+		colr=colr.match("color:(.*?)((?=;)|$)");
+		colr=colr[1];
     		$(divID)            //$('#jlCheckBox')
-        	.append(`<input type="checkbox" class="chkJLname" id="${name}" value="${seq}">${name}`)
+        	.append(`<label style="color:${colr}"><input type="checkbox" class="chkJLname" id="${name}" value="${seq}" data-color="${colr}"><span>${name}</span></label>`)
 	        .append(`<br>`);
 		});  
     //... and setup the corresponding click event handler:
 	$('.chkJLname').click(function(e){
 	  jlNum = $(this).val();
 	  let name=$(this).attr("id");
+	let color=$(this).data().color;
 	  if(mode==0){  //in mode 0, (adding "new"): only one JingLuo can be active at a time.
 		//UI
 		$('.chkJLname').prop("checked", false);  //de-select all
@@ -141,7 +145,7 @@ function initJLlist(divID, mode){
 		$("#uiPoint").val("");
 		//load XueWei and JL into 3D; but only one at a time
 		clearAllJLs(); 
-	  	loadJL(name);
+	  	loadJL(name, color);
 	  }else{   
 		if(!$(this).is(":checked")){  //uncheck event
         	clearJL(name);
@@ -149,7 +153,7 @@ function initJLlist(divID, mode){
 	 		//load XueWei and JL into 3D
 			$("#jlName").text('');  //no need of it
 			//load XueWei and JL into 3D
-			loadJL(name);
+			loadJL(name, color);
 		}
 	  }
 	
@@ -179,7 +183,7 @@ $('.edMod').click(function(e){
 //save for "free point modifier" and "sticky point modifier"
 $('#saveModifiedPts').click( ()=>{
 	for(var k in updatedPoints){
-		console.log(k, updatedPoints[k]);
+//		console.log(k, updatedPoints[k]);
 		let [jl, name]=k.split('_');
 		let coor=updatedPoints[k][0];
 		let facing=updatedPoints[k][1];
@@ -197,7 +201,7 @@ $("#editorSel").hide();
 
 
 /////////////////////////////////////////////////////////
-function loadJL(jlName){
+function loadJL(jlName, colr){
   let ptr;
   let ptrList=[], temp=[];  // eg. [ [pt1, pt2 ...], [pt10, pt20, ...]]
   //first empty out the dropdown options:
@@ -229,8 +233,8 @@ function loadJL(jlName){
 		ptrList.push(temp);
 
 	if(ptrList.length>0){
-		createPointsOfJL(jlName, ptrList, 0x0000ff);
-		createLinesOfJL(jlName, ptrList, 0x0000ff);
+		createPointsOfJL(jlName, ptrList, colr);
+		createLinesOfJL(jlName, ptrList, colr);
 	}
 }
 
@@ -297,7 +301,7 @@ $( "#editDialog" ).dialog({
 			$('#uiSeq').text("");
 
 			//reload the current JingLuo to include the newly added point
-			loadJL($("#jlName").text());
+			loadJL($("#jlName").text(), color);
 			render();
      	}
 	}
