@@ -1037,20 +1037,22 @@ function updateLabels() {
 			let co = get2DcoorInView(ch);
 			let x=Math.ceil(co.x/labelSize);
 			let y=Math.ceil(co.y/labelSize);
+			let colr=ch.parent.parent.jlColor;
 			if(!pArr[x])
 				pArr[x]=[];	
-			pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top]; 
+			pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top, colr]; 
 		});
 	}else{   //viewer
 		visiblePtrs.forEach((ch, ix)=>{
 			if(!ch.name.startsWith('x')){   //display only real point; not the assiting ones
 				let co = get2DcoorInView(ch);
+				let colr=ch.parent.parent.jlColor;
 				let x=Math.ceil(co.x/labelSize);
 				let y=Math.ceil(co.y/labelSize);
 			//console.log(x,y);
 				if(!pArr[x])
 					pArr[x]=[];	
-				pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top]; 
+				pArr[x][y]=[ ch.name, ch.jlPtrSeq, co.x+rect.left, co.y+rect.top, colr]; 
 			}	
 		});
 	}
@@ -1061,7 +1063,7 @@ function updateLabels() {
 	function createAndAddLbls(arrOfPts){
 		arrOfPts.forEach(row=>{  //row
 			row.forEach(col=>{
-				let [name, seq, x, y]=col;
+				let [name, seq, x, y, color]=col;
 				//console.log(name);
 				const elem = document.createElement('div');
 				elem.id = name+"_"+seq;
@@ -1070,7 +1072,7 @@ function updateLabels() {
 				if(isEditor){
 					elem.innerHTML = tt;
 				}else{
-					elem.innerHTML = '<a href="http://localhost/html/text/textEdit_h.html?sid=3&sname=' + tt + '" target="details">' + tt + '</a>';
+					elem.innerHTML = '<a style="color: inherit" href="http://localhost/html/text/textEdit_h.html?sid=3&sname=' + tt + '" target="details">' + tt + '</a>';
 				}
 		        elem.style.display = '';
 		        // move the elem to that position
@@ -1080,6 +1082,8 @@ function updateLabels() {
 					 
 		        // set the zIndex for sorting
 		        elem.style.zIndex = (-tempV.z * .5 + .5) * 100000 | 0;
+
+				elem.style.color=color;
 				
 				labelContainer.appendChild(elem);
 			});
