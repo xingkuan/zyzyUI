@@ -82,9 +82,9 @@ function setTextFields(srcUrl, innerFn, innderFnX) {
 function saveStgSrc(replacing, composeDataFn) {
 	//rem alert('to create... \nsrc: ' + $('#srcNote').val() + '\n...tgt: ' +  $('#tgtNote').val() + "\n...relation:" + $('#selRelation option:selected').val());
 	//rem console.log('add a note');
-		url="/zyzySvc/STG/srcReplaceVersion0";
+		url="http://localhost:8080/zyzySvc/STG/srcReplaceVersion0";
 	if(!replacing)
-		url="/zyzySvc/STG/srcSaveNewVersion";   
+		url="http://localhost:8080/zyzySvc/STG/srcSaveNewVersion";   
 	$.ajax({
 		type : 'POST',
 		async: false,
@@ -95,14 +95,14 @@ function saveStgSrc(replacing, composeDataFn) {
 		//dataType: "json",
 		dataType : "text",
 		//data : '{"cat": "test1", "val": ' + $('#srcNote').val() + '}',
-		data : composeDataFn,
+		data : composeDataFn(),
 		success : function(data, textStatus, jqXHR) {
 			//$('#srcContent').val('note created successfully');
 			//alert('note created successfully');
             //window.location = window.location.href;
             //loadPage(srcId, srcSeq);
             //location.reload();
-            window.location = thisUrl;
+           //？ window.location = thisUrl;
 		},
 		error : function(jqXHR, textStatus, errorThrown) {
 			alert('error: ' + textStatus + errorThrown);

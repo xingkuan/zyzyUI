@@ -299,7 +299,10 @@ $( "#editDialog" ).dialog({
 			$('#uiLine').text("");
 			$('#uiPoint').text("");
 			$('#uiSeq').text("");
-
+			
+			//from the checkbox, get the color of the current JingLuo line
+			let jlCheckedItem = $( ".chkJLname:checked" );  //should be only 1
+			let color=jlCheckedItem.data().color;
 			//reload the current JingLuo to include the newly added point
 			loadJL($("#jlName").text(), color);
 			render();

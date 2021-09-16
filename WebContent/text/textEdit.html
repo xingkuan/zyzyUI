@@ -120,8 +120,8 @@ function loadPage(sId, sSeq){
 		}
 				
 		//$('#srcMeta').text(JSON.stringify(jsonData[0]["meta"]));
-		$('#srcMeta').text(e["meta"]);
-		$('#srcProp').text(e["properties"]);
+		$('#srcMeta').val(e["meta"]);
+		$('#srcProp').val(e["properties"]);
 		$("#srcImg").empty();
 		if(imgURL!=null)
 			$("#srcImg").html('<img src="'+imgURL+'" alt="">');
@@ -176,6 +176,7 @@ function setupNavigator(sId, sSeq){
 				//name:	$('#srcName').val(),
 				name:	$('#srcName').text(),
 				meta:	$('#srcMeta').val(),
+				seq:	$("#seqNum").val(),
 				properties:	$('#srcProp').val(),
 				//note: 	$('#srcNote').html()
 				//note: 	editor.root.innerHTML,
