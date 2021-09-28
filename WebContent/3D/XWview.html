@@ -19,7 +19,11 @@
 <body">
 
 <div style="display:flex">
+<div>
 	<div id="jlCheckBox" style="width:120px"></div>
+<br>seach XW:<br>
+<input type="text" id="txtSchXW" size="4"><button id="btnSchXW">loc</button>
+</div>
 	<div id="container" class="container" style="float:left">
 		<div id="xx"  style="postition:relative;background:black; color:white">
 			Model: <select id = "selectModel">
@@ -51,10 +55,15 @@ import {populateField} from './XWJLdata.js';
 import {init3D, loadGLTF, render, 
 	createPointsOfJL, createLinesOfJL, createParticleSysOfJL, 
 	clearAllJLs, clearJL, 
+	searchXW,
 	updateAllParticleSys, 
 	setupClickHandler,
 	initPointLabels, startAnimation, stopAnimation
 } from './3Dcommons.js';
+
+$("#btnSchXW").on('click', function(){
+searchXW($("#txtSchXW").val());
+});
 
 // setup model selection
 $("#selectModel").on('change', function(){
@@ -197,7 +206,6 @@ console.log('container: '+ $('#container')[0].clientWidth );
 render();
 */
 	});
-
 
 </script>
 

@@ -75,6 +75,7 @@ console.log("width:"+c.clientWidth);
   camera.position.set(0, 10, 20);
   camera.zoom = 0.5;
   //camera.updateProjectionMatrix();
+  //camera.lookAt()  ;;; let orbitCtrl control
 
   //cameraOrtho = new THREE.OrthographicCamera( - 600 * aspect, 600 * aspect, 600, - 600, 0.01, 30000 );
   //currentCamera = cameraPersp;
@@ -106,7 +107,11 @@ console.log("width:"+c.clientWidth);
 	  //CameraCtrl = new OrbitControls(camera, canvas);  //2021.06.17: not working in 129?
 	  orbitCtrl = new OrbitControls(camera, renderer.domElement);
 	  orbitCtrl.target.set(0, 5, 0);
-	  //trying ...
+//2021.09.25 trying ...
+orbitCtrl.touches = {
+	ONE: THREE.TOUCH.ROTATE,
+	TWO: THREE.TOUCH.DOLLY_PAN
+}
 	  orbitCtrl.enableRotate = true;
 	  orbitCtrl.enableZoom = true;
 	  orbitCtrl.enablePan = false;
@@ -474,9 +479,13 @@ function mouseIntersectOn3DObj(objs, mouseEvent){   //[modelObj]
 }
 function pointCameraOnClick( e ) {
 	let [pos, facing]=mouseIntersectOn3DObj([modelObj], e);
+	
 	if(pos){
 		//orbitCtrl.target.set(child.point.x,child.point.y,child.point.z);
-		orbitCtrl.target.set(pos.x,pos.y,pos.x);
+//??TODO 2021.09.25 seems like, when eg clicked on hand, it is not sentered as desired.
+console.log(pos);
+		//orbitCtrl.target.set(pos.x,pos.y,pos.x);
+		orbitCtrl.target.copy(pos);
 		orbitCtrl.update();
 	}   	
 }
@@ -992,7 +1001,17 @@ function clearAllJLs(){
 	ptsGroups.clear();
 }
 
-
+//2021.09.27 TODO
+function searchXW(xwName){
+let xwPtr = ptsGroups.getObjectByName(xwName, true);
+if(xwPtr){
+	//point camera to it
+	//orbitCtrl.target.set(pos.x,pos.y,pos.x);
+	orbitCtrl.target.copy(xwPtr.position);  //?same as camera.target.set...
+	//also rotate to face it
+console.log(camera.position); 
+	orbitCtrl.update();}
+}
 
 function updateLabels() {
 	var tempLabelPos=[];
@@ -1205,6 +1224,7 @@ updatedPoints,
  renderer, init3D, loadGLTF, render,
 createPointsOfJL, createLinesOfJL,createParticleSysOfJL,
 clearAllJLs, clearJL,
+searchXW,
 updateAllParticleSys,
 //setupFreeModifier, removeFreeModifier, 
 //setupStickModifier, removeStickModifier,
