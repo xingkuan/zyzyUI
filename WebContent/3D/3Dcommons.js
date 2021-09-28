@@ -608,6 +608,7 @@ function render() {
 //camDist = camera.position.distanceTo( orbitCtrl.target );
 //$("#curvLen").html("camers dist: "+ camDist);
 
+//console.log(camera.position);
 
     renderer.render(scene, camera);
 	//2021.08.25 DEVL: try to use Sprite as label for better performance
@@ -1009,7 +1010,13 @@ if(xwPtr){
 	//orbitCtrl.target.set(pos.x,pos.y,pos.x);
 	orbitCtrl.target.copy(xwPtr.position);  //?same as camera.target.set...
 	//also rotate to face it
-console.log(camera.position); 
+	//camera.rotation.set(0, 0.5, 0);
+console.log('camera: ', camera.position); 
+console.log('facing: ', xwPtr.facing); 
+console.log('distance: ',camera.position.distanceTo( xwPtr.position ));
+camera.position.x=xwPtr.facing.x*7 + xwPtr.position.x;
+camera.position.y=xwPtr.facing.y*7 + xwPtr.position.y;
+camera.position.z=xwPtr.facing.z*7 + xwPtr.position.z;
 	orbitCtrl.update();}
 }
 
